@@ -1,0 +1,11 @@
+2018-09-19 12:01:22.910 EDT [56338] LOG:  listening on IPv6 address "::1", port 5432
+2018-09-19 12:01:22.911 EDT [56338] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2018-09-19 12:01:22.911 EDT [56338] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2018-09-19 12:01:22.926 EDT [56339] LOG:  database system was shut down at 2018-09-19 12:01:14 EDT
+2018-09-19 12:01:22.929 EDT [56338] LOG:  database system is ready to accept connections
+2018-09-19 12:01:29.782 EDT [56361] FATAL:  role "postgres" does not exist
+2018-09-19 12:03:05.849 EDT [56382] FATAL:  database "willis" does not exist
+2018-09-19 12:07:40.734 EDT [56338] LOG:  received smart shutdown request
+2018-09-19 12:07:40.736 EDT [56338] LOG:  worker process: logical replication launcher (PID 56345) exited with exit code 1
+2018-09-19 12:07:40.736 EDT [56340] LOG:  shutting down
+2018-09-19 12:07:40.744 EDT [56338] LOG:  database system is shut down

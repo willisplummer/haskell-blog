@@ -1,7 +1,6 @@
 module Main where
 
-  import           App
+  import API (runServer)
   
   main :: IO ()
-  main = run "sqlite.db"
-  
+  main = runServer

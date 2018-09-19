@@ -23,9 +23,10 @@ dependencies:
 - base >= 4.7 && < 5
 - aeson
 - monad-logger
+- mtl
 - persistent
 - persistent-template
-- persistent-sqlite
+- persistent-postgresql
 - servant
 - servant-server
 - string-conversions
