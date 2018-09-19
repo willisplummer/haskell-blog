@@ -9,14 +9,20 @@ jobs:
         keys:
           - stack-work-{{checksum “stack.yaml”}}-\
                        {{checksum “HaskellTestApp.cabal”}}
-      - run: stack setup
-      - run: stack build
-      - run: stack test
+      - run: 
+        name: setup
+        command: stack setup
+      - run: 
+          name: build
+          command: stack build
+      - run:
+          name: test
+          command: stack test
       - save_cache:
-        key: stack-work-{{checksum “stack.yaml”}}-\
-                        {{checksum “HaskellTestApp.cabal”}}
-        paths:
-          - “.stack-work”
+          key: stack-work-{{checksum “stack.yaml”}}-\
+                          {{checksum “HaskellTestApp.cabal”}}
+          paths:
+            - “.stack-work”
 
 workflows:
   version: 2

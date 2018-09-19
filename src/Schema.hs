@@ -22,7 +22,6 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     name Text
     email Text
     age Int
-    occupation Text
     UniqueEmail email
     deriving Show Read
 |]
@@ -32,7 +31,6 @@ instance ToJSON User where
     [ "name" .= userName user
     , "email" .= userEmail user
     , "age" .= userAge user
-    , "occupation" .= userOccupation user
     ]
 
 instance FromJSON User where
@@ -43,10 +41,8 @@ parseUser o = do
   uName <- o .: "name"
   uEmail <- o .: "email"
   uAge <- o .: "age"
-  uOccupation <- o .: "occupation"
   return User
     { userName = uName
     , userEmail = uEmail
     , userAge = uAge
-    , userOccupation = uOccupation
     }
