@@ -49,6 +49,18 @@ executables:
     dependencies:
     - myblog
 
+  migrate-db:
+    main:                MigrateDB.hs
+    source-dirs:         app
+    ghc-options:
+    - -main-is
+    - MigrateDB
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - myblog
+
 tests:
   myblog-test:
     main:                Spec.hs

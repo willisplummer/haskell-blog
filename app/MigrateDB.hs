@@ -1,5 +1,4 @@
-module Main where
-
+module MigrateDB where
   import Database (localConnString, migrateDB)
   
   main :: IO ()
