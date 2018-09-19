@@ -1,35 +1,25 @@
 version: 2
 jobs:
-  build:
+  build_project:
     docker:
-      - image: haskell:8.4.3
+      - image: haskell:8.0.2
     steps:
       - checkout
       - restore-cache:
         keys:
           - stack-work-{{checksum “stack.yaml”}}-\
                        {{checksum “HaskellTestApp.cabal”}}
-
-      - run: 
-          name: setup
-          command: stack setup
-
-      - run:
-          name: build
-          command: stack build
-
-      - run:
-          name: test
-          command: stack test
-
+      - run: stack setup
+      - run: stack build
+      - run: stack test
       - save_cache:
-          key: stack-work-{{checksum “stack.yaml”}}-\
-                          {{checksum “HaskellTestApp.cabal”}}
-          paths:
-            - “.stack-work”
+        key: stack-work-{{checksum “stack.yaml”}}-\
+                        {{checksum “HaskellTestApp.cabal”}}
+        paths:
+          - “.stack-work”
 
 workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - build_project
