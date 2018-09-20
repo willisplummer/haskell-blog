@@ -11,7 +11,7 @@ import qualified Data.ByteString.Char8(ByteString)
 import           Data.Maybe(fromJust)
 import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8)
-import           Database.Persist (get, insert, delete)
+import           Database.Persist (entityVal, selectFirst, get, insert, delete, (==.))
 import           Database.Persist.Sql (fromSqlKey, toSqlKey)
 import           Database.Persist.Postgresql (ConnectionString, withPostgresqlConn, runMigration, runMigrationUnsafe, SqlPersistT)
 
@@ -35,6 +35,11 @@ migrateDB connString = runAction connString (runMigrationUnsafe migrateAll)
 
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe User)
 fetchUserPG connString uid = runAction connString (get (toSqlKey uid))
+
+fetchUserByEmailPG :: ConnectionString -> Text -> IO (Maybe User)
+fetchUserByEmailPG connString email = do
+  entity <- runAction connString (selectFirst [UserEmail ==. email] [])
+  return (fmap entityVal entity)
 
 hashPassword :: Data.Text.Text -> IO (Data.ByteString.Char8.ByteString)
 hashPassword t = do
