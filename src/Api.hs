@@ -20,7 +20,7 @@ import           Schema
 
 type UsersAPI = 
        "users" :> Capture "userid" Int64 :> Get '[JSON] User
-  :<|> "users" :> ReqBody '[JSON] User :> Post '[JSON] Int64
+  :<|> "users" :> ReqBody '[JSON] RawUser :> Post '[JSON] Int64
 
 usersAPI :: Proxy UsersAPI
 usersAPI = Proxy :: Proxy UsersAPI
@@ -32,7 +32,7 @@ fetchUsersHandler connString uid = do
     Just user -> return user
     Nothing -> Handler $ (throwE $ err401 { errBody = "Could not find user with that ID" })
 
-createUserHandler :: ConnectionString -> User -> Handler Int64
+createUserHandler :: ConnectionString -> RawUser -> Handler Int64
 createUserHandler connString user = liftIO $ createUserPG connString user
 
 

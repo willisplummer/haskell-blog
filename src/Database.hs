@@ -5,10 +5,15 @@ module Database where
 import           Control.Monad.Logger (runStdoutLoggingT, MonadLogger, LoggingT)
 import           Control.Monad.Reader (runReaderT)
 import           Control.Monad.IO.Class (MonadIO)
+import           Crypto.BCrypt(validatePassword, hashPasswordUsingPolicy, slowerBcryptHashingPolicy)
 import           Data.Int (Int64)
+import qualified Data.ByteString.Char8(ByteString)
+import           Data.Maybe(fromJust)
+import           Data.Text (Text)
+import           Data.Text.Encoding (encodeUtf8)
 import           Database.Persist (get, insert, delete)
 import           Database.Persist.Sql (fromSqlKey, toSqlKey)
-import           Database.Persist.Postgresql (ConnectionString, withPostgresqlConn, runMigration, SqlPersistT)
+import           Database.Persist.Postgresql (ConnectionString, withPostgresqlConn, runMigration, runMigrationUnsafe, SqlPersistT)
 
 import           Schema
 
@@ -24,14 +29,32 @@ runAction connectionString action =
   runStdoutLoggingT $ withPostgresqlConn connectionString $ \backend ->
     runReaderT action backend
 
+-- TODO: replace runMigrationUnsafe before deploying
 migrateDB :: ConnectionString -> IO ()
-migrateDB connString = runAction connString (runMigration migrateAll)
+migrateDB connString = runAction connString (runMigrationUnsafe migrateAll)
 
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe User)
 fetchUserPG connString uid = runAction connString (get (toSqlKey uid))
 
-createUserPG :: ConnectionString -> User -> IO Int64
-createUserPG connString user = fromSqlKey <$> runAction connString (insert user)
+hashPassword :: Data.Text.Text -> IO (Data.ByteString.Char8.ByteString)
+hashPassword t = do
+  mb <- Crypto.BCrypt.hashPasswordUsingPolicy Crypto.BCrypt.slowerBcryptHashingPolicy (Data.Text.Encoding.encodeUtf8 t)
+  return (fromJust mb)
+
+hashUser :: RawUser -> IO User
+hashUser rawUser = do
+  hashedPW <- hashPassword (ruPassword rawUser )
+  return User {
+    userName = ruName rawUser,
+    userEmail = ruEmail rawUser,
+    userHashedPassword = hashedPW
+  }
+
+createUserPG :: ConnectionString -> RawUser -> IO Int64
+createUserPG connString rawUser = do
+  hashedUser <- hashUser rawUser
+  insertedUser <- runAction connString (insert hashedUser)
+  return (fromSqlKey insertedUser)
 
 deleteUserPG :: ConnectionString -> Int64 -> IO ()
 deleteUserPG connString uid = runAction connString (delete userKey)

@@ -16,12 +16,13 @@ import           Data.Aeson.Types (Parser, Pair)
 import           Database.Persist (Entity(..), Entity)
 import qualified Database.Persist.TH as PTH
 import           Data.Text (Text)
+import qualified Data.ByteString.Char8(ByteString, unpack)
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User sql=users
     name Text
     email Text
-    age Int
+    hashedPassword Data.ByteString.Char8.ByteString
     UniqueEmail email
     deriving Show Read
 |]
@@ -30,19 +31,26 @@ instance ToJSON User where
   toJSON user = object 
     [ "name" .= userName user
     , "email" .= userEmail user
-    , "age" .= userAge user
+    -- dont send pwHash to frontend
+    -- , "hashedPassword" .= Data.ByteString.Char8.unpack (userHashedPassword user)
     ]
 
-instance FromJSON User where
-  parseJSON = withObject "User" parseUser
+data RawUser = RawUser {
+    ruName :: Text
+  , ruEmail :: Text
+  , ruPassword :: Text
+} deriving (Show, Read)
 
-parseUser :: Object -> Parser User
-parseUser o = do
-  uName <- o .: "name"
-  uEmail <- o .: "email"
-  uAge <- o .: "age"
-  return User
-    { userName = uName
-    , userEmail = uEmail
-    , userAge = uAge
+instance FromJSON RawUser where
+  parseJSON = withObject "User" parseRawUser
+
+parseRawUser :: Object -> Parser RawUser
+parseRawUser o = do
+  name <- o .: "name"
+  email <- o .: "email"
+  password <- o .: "password"
+  return RawUser
+    { ruName = name
+    , ruEmail = email
+    , ruPassword = password
     }
