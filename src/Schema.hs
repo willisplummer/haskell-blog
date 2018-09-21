@@ -54,20 +54,3 @@ parseRawUser o = do
     , ruEmail = email
     , ruPassword = password
     }
-
-data UserAuth = UserAuth {
-    authEmail :: Text
-  , authPassword :: Text
-  } deriving (Show, Read)
-
-instance FromJSON UserAuth where
-  parseJSON = withObject "UserAuth" parseUserAuth
-
-parseUserAuth :: Object -> Parser UserAuth
-parseUserAuth o = do
-  email <- o .: "email"
-  password <- o .: "password"
-  return UserAuth
-    { authEmail = email
-    , authPassword = password
-    }

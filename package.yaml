@@ -30,6 +30,7 @@ dependencies:
 - persistent-template
 - persistent-postgresql
 - servant
+- servant-auth
 - servant-server
 - string-conversions
 - text
