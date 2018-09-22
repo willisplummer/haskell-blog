@@ -29,8 +29,10 @@ dependencies:
 - persistent
 - persistent-template
 - persistent-postgresql
+- resource-pool
 - servant
 - servant-auth
+- servant-auth-server
 - servant-server
 - string-conversions
 - text

@@ -9,11 +9,12 @@ import           Crypto.BCrypt(validatePassword, hashPasswordUsingPolicy, slower
 import           Data.Int (Int64)
 import qualified Data.ByteString.Char8(ByteString)
 import           Data.Maybe(fromJust)
+import           Data.Pool(Pool)
 import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import           Database.Persist (entityVal, selectFirst, get, insert, delete, (==.))
-import           Database.Persist.Sql (fromSqlKey, toSqlKey)
-import           Database.Persist.Postgresql (ConnectionString, withPostgresqlConn, runMigration, runMigrationUnsafe, SqlPersistT)
+import           Database.Persist.Sql (fromSqlKey, toSqlKey, SqlBackend)
+import           Database.Persist.Postgresql (Connection, ConnectionString, withPostgresqlConn, runMigration, runMigrationUnsafe, SqlPersistT)
 
 import           Schema
 
@@ -39,6 +40,11 @@ fetchUserPG connString uid = runAction connString (get (toSqlKey uid))
 fetchUserByEmailPG :: ConnectionString -> Data.ByteString.Char8.ByteString -> IO (Maybe User)
 fetchUserByEmailPG connString email = do
   entity <- runAction connString (selectFirst [UserEmail ==. (decodeUtf8 email)] [])
+  return (fmap entityVal entity)
+
+fetchUserByEmailViaConnectionPG :: SqlBackend -> Data.ByteString.Char8.ByteString -> IO (Maybe User)
+fetchUserByEmailViaConnectionPG connection email = do
+  entity <- runReaderT (selectFirst [UserEmail ==. (decodeUtf8 email)] []) (connection :: SqlBackend)
   return (fmap entityVal entity)
 
 hashPassword :: Data.Text.Text -> IO (Data.ByteString.Char8.ByteString)
