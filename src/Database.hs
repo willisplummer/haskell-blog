@@ -12,7 +12,7 @@ import           Data.Maybe(fromJust)
 import           Data.Pool(Pool)
 import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
-import           Database.Persist (entityVal, selectFirst, get, insert, delete, (==.))
+import           Database.Persist (entityVal, selectFirst, get, insert, delete, selectList, (==.))
 import           Database.Persist.Sql (fromSqlKey, toSqlKey, SqlBackend)
 import           Database.Persist.Postgresql (Connection, ConnectionString, withPostgresqlConn, runMigration, runMigrationUnsafe, SqlPersistT)
 
@@ -33,6 +33,11 @@ runAction connectionString action =
 -- TODO: replace runMigrationUnsafe before deploying
 migrateDB :: ConnectionString -> IO ()
 migrateDB connString = runAction connString (runMigrationUnsafe migrateAll)
+
+fetchUsersPG :: ConnectionString -> IO [User]
+fetchUsersPG connString = do
+  entities <- runAction connString (selectList [] [])
+  return (fmap entityVal entities)
 
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe User)
 fetchUserPG connString uid = runAction connString (get (toSqlKey uid))

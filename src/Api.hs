@@ -26,17 +26,23 @@ import           Servant.Auth
 import           Servant.Auth.Server (AuthResult(..), BasicAuthCfg, FromBasicAuthData, FromJWT, ToJWT, fromBasicAuthData, generateKey, defaultJWTSettings, defaultCookieSettings, throwAll)
 import           System.IO
 
-import           Database (fetchUserByEmailPG, fetchUserByEmailViaConnectionPG, fetchUserPG, createUserPG, fetchPostgresConnection)
+import           Database (fetchUsersPG, fetchUserByEmailPG, fetchUserByEmailViaConnectionPG, fetchUserPG, createUserPG, fetchPostgresConnection)
 import           Schema
 
 port :: Int
 port = 3001
 
+type GetUser = "users" :> Capture "userid" Int64 :> Get '[JSON] User
+type GetUsers = "users" :> Get '[JSON] [User]
+type AddUser = "users" :> ReqBody '[JSON] RawUser :> Post '[JSON] Int64
+type AuthenticateUser = "authenticate" :> ReqBody '[JSON] BasicAuthData :> Post '[JSON] AuthenticatedUser
+
 -- todo: dont auth the authenticate route?
 type UsersAPI = 
-       "users" :> Capture "userid" Int64 :> Get '[JSON] User
-  :<|> "users" :> ReqBody '[JSON] RawUser :> Post '[JSON] Int64
-  :<|> "authenticate" :> ReqBody '[JSON] BasicAuthData :> Post '[JSON] AuthenticatedUser
+       GetUser
+  :<|> GetUsers
+  :<|> AddUser
+  :<|> AuthenticateUser
 
 parseUserAuth :: Object -> Parser BasicAuthData
 parseUserAuth o = do
@@ -50,12 +56,15 @@ parseUserAuth o = do
 instance FromJSON BasicAuthData where
   parseJSON = withObject "BasicAuthData" parseUserAuth
 
-fetchUsersHandler :: ConnectionString -> Int64 -> Handler User
-fetchUsersHandler connString uid = do
+fetchUserHandler :: ConnectionString -> Int64 -> Handler User
+fetchUserHandler connString uid = do
   maybeUser <- liftIO $ fetchUserPG connString uid
   case maybeUser of
     Just user -> return user
     Nothing -> Handler $ (throwE $ err401 { errBody = "Could not find user with that ID" })
+
+fetchUsersHandler :: ConnectionString -> Handler [User]
+fetchUsersHandler connString = do liftIO $ fetchUsersPG connString
 
 validatePassword' :: Data.ByteString.Char8.ByteString -> Data.ByteString.Char8.ByteString -> Bool
 validatePassword' hashedPw testPw =
@@ -103,15 +112,15 @@ instance FromBasicAuthData AuthenticatedUser where
 createUserHandler :: ConnectionString -> RawUser -> Handler Int64
 createUserHandler connString user = liftIO $ createUserPG connString user
 
-type UsersApiServer = Auth '[JWT] AuthenticatedUser :> UsersAPI
+type UsersApiServer = Auth '[JWT, Servant.Auth.BasicAuth] AuthenticatedUser :> UsersAPI
 
 server :: ConnectionString -> Server UsersApiServer
 server connString (Authenticated user) =
+  (fetchUserHandler connString) :<|> 
   (fetchUsersHandler connString) :<|> 
   (createUserHandler connString) :<|>
   (authenticateUserHandler connString)
 server connString _ = throwAll err401
-
 
 mkApp :: ConnectionString -> IO Application
 mkApp connString = do
