@@ -103,7 +103,7 @@ instance FromBasicAuthData AuthenticatedUser where
 createUserHandler :: ConnectionString -> RawUser -> Handler Int64
 createUserHandler connString user = liftIO $ createUserPG connString user
 
-type UsersApiServer = Auth '[JWT, Servant.Auth.BasicAuth] AuthenticatedUser :> UsersAPI
+type UsersApiServer = Auth '[JWT] AuthenticatedUser :> UsersAPI
 
 server :: ConnectionString -> Server UsersApiServer
 server connString (Authenticated user) =
