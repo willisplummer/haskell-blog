@@ -7,50 +7,74 @@
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE DeriveGeneric              #-}
 
 module Schema where
 
-import           Data.Aeson (ToJSON, toJSON, object, (.=), FromJSON, parseJSON, (.:), withObject
-                            , Object)
-import           Data.Aeson.Types (Parser, Pair)
-import           Database.Persist (Entity(..), Entity)
-import qualified Database.Persist.TH as PTH
-import           Data.Text (Text)
-import qualified Data.ByteString.Char8(ByteString, unpack)
+import           Data.Aeson                     ( ToJSON
+                                                , toJSON
+                                                , object
+                                                , (.=)
+                                                , FromJSON
+                                                , parseJSON
+                                                , (.:)
+                                                , withObject
+                                                , Object
+                                                , Value(..)
+                                                , defaultOptions
+                                                , fieldLabelModifier
+                                                , genericParseJSON
+                                                )
+import           Data.Aeson.Types               ( Parser
+                                                , Pair
+                                                )
+import           Data.Char                      ( toLower )
+import           Database.Persist               ( Entity(..)
+                                                , Entity
+                                                )
+import qualified Database.Persist.TH           as PTH
+import qualified Data.ByteString            as BS
+import qualified Data.ByteString.Char8      as B8
+import           GHC.Generics
+
+instance FromJSON BS.ByteString where
+  parseJSON src = do
+    str <- parseJSON src
+    return $ B8.pack str
+
+instance ToJSON BS.ByteString where
+  toJSON = toJSON . B8.unpack
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User sql=users
-    name Text
-    email Text
-    hashedPassword Data.ByteString.Char8.ByteString
+    name BS.ByteString
+    email BS.ByteString
+    hashedPassword BS.ByteString
     UniqueEmail email
     deriving Show Read
 |]
 
+data PresentationalUser = PUser {
+  puName :: BS.ByteString,
+  puEmail :: BS.ByteString
+} deriving (Eq, Show, Read, Generic)
+
+instance ToJSON PresentationalUser
+instance FromJSON PresentationalUser
+
+presentationalizeUser :: User -> PresentationalUser
+presentationalizeUser (User name email pw) = PUser name email
+
 instance ToJSON User where
-  toJSON user = object 
-    [ "name" .= userName user
-    , "email" .= userEmail user
-    -- dont send pwHash to frontend
-    -- , "hashedPassword" .= Data.ByteString.Char8.unpack (userHashedPassword user)
-    ]
+  toJSON = toJSON . presentationalizeUser 
 
-data RawUser = RawUser {
-    ruName :: Text
-  , ruEmail :: Text
-  , ruPassword :: Text
-} deriving (Show, Read)
+data NewUser = NewUser {
+    nuUserName :: BS.ByteString
+  , nuEmail :: BS.ByteString
+  , nuPassword :: BS.ByteString
+} deriving (Eq, Show, Read, Generic)
 
-instance FromJSON RawUser where
-  parseJSON = withObject "User" parseRawUser
-
-parseRawUser :: Object -> Parser RawUser
-parseRawUser o = do
-  name <- o .: "name"
-  email <- o .: "email"
-  password <- o .: "password"
-  return RawUser
-    { ruName = name
-    , ruEmail = email
-    , ruPassword = password
-    }
+instance FromJSON NewUser where
+  parseJSON = genericParseJSON defaultOptions {
+    fieldLabelModifier = map toLower . drop 2
+  }

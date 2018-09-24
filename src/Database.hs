@@ -2,19 +2,40 @@
 
 module Database where
 
-import           Control.Monad.Logger (runStdoutLoggingT, MonadLogger, LoggingT)
-import           Control.Monad.Reader (runReaderT)
-import           Control.Monad.IO.Class (MonadIO)
-import           Crypto.BCrypt(validatePassword, hashPasswordUsingPolicy, slowerBcryptHashingPolicy)
-import           Data.Int (Int64)
-import qualified Data.ByteString.Char8(ByteString)
-import           Data.Maybe(fromJust)
-import           Data.Pool(Pool)
-import           Data.Text (Text)
-import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
-import           Database.Persist (entityVal, selectFirst, get, insert, delete, selectList, (==.))
-import           Database.Persist.Sql (fromSqlKey, toSqlKey, SqlBackend)
-import           Database.Persist.Postgresql (Connection, ConnectionString, withPostgresqlConn, runMigration, runMigrationUnsafe, SqlPersistT)
+import           Control.Monad.Logger           ( runStdoutLoggingT
+                                                , MonadLogger
+                                                , LoggingT
+                                                )
+import           Control.Monad.Reader           ( runReaderT )
+import           Control.Monad.IO.Class         ( MonadIO, liftIO )
+import           Crypto.BCrypt                  ( validatePassword
+                                                , hashPasswordUsingPolicy
+                                                , slowerBcryptHashingPolicy
+                                                )
+import           Data.Int                       ( Int64 )
+import qualified Data.ByteString                as BS ( ByteString )
+import           Data.Maybe                     ( fromJust )
+import           Data.Pool                      ( Pool )
+
+import           Database.Persist               ( entityVal
+                                                , selectFirst
+                                                , get
+                                                , insert
+                                                , delete
+                                                , selectList
+                                                , (==.)
+                                                )
+import           Database.Persist.Sql           ( fromSqlKey
+                                                , toSqlKey
+                                                , SqlBackend
+                                                )
+import           Database.Persist.Postgresql    ( Connection
+                                                , ConnectionString
+                                                , withPostgresqlConn
+                                                , runMigration
+                                                , runMigrationUnsafe
+                                                , SqlPersistT
+                                                )
 
 import           Schema
 
@@ -26,7 +47,7 @@ fetchPostgresConnection :: IO ConnectionString
 fetchPostgresConnection = return localConnString
 
 runAction :: ConnectionString -> SqlPersistT (LoggingT IO) a -> IO a
-runAction connectionString action = 
+runAction connectionString action =
   runStdoutLoggingT $ withPostgresqlConn connectionString $ \backend ->
     runReaderT action backend
 
@@ -42,38 +63,48 @@ fetchUsersPG connString = do
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe User)
 fetchUserPG connString uid = runAction connString (get (toSqlKey uid))
 
-fetchUserByEmailPG :: ConnectionString -> Data.ByteString.Char8.ByteString -> IO (Maybe User)
+fetchUserByEmailPG
+  :: ConnectionString -> BS.ByteString -> IO (Maybe User)
 fetchUserByEmailPG connString email = do
-  entity <- runAction connString (selectFirst [UserEmail ==. (decodeUtf8 email)] [])
+  entity <- runAction connString
+                      (selectFirst [UserEmail ==. email] [])
   return (fmap entityVal entity)
 
-fetchUserByEmailViaConnectionPG :: SqlBackend -> Data.ByteString.Char8.ByteString -> IO (Maybe User)
+fetchUserByEmailViaConnectionPG
+  :: SqlBackend -> BS.ByteString -> IO (Maybe User)
 fetchUserByEmailViaConnectionPG connection email = do
-  entity <- runReaderT (selectFirst [UserEmail ==. (decodeUtf8 email)] []) (connection :: SqlBackend)
+  entity <- runReaderT (selectFirst [UserEmail ==. email] [])
+                       (connection :: SqlBackend)
   return (fmap entityVal entity)
 
-hashPassword :: Data.Text.Text -> IO (Data.ByteString.Char8.ByteString)
+hashPassword :: BS.ByteString -> IO (BS.ByteString)
 hashPassword t = do
-  mb <- Crypto.BCrypt.hashPasswordUsingPolicy Crypto.BCrypt.slowerBcryptHashingPolicy (Data.Text.Encoding.encodeUtf8 t)
+  mb <- Crypto.BCrypt.hashPasswordUsingPolicy
+    Crypto.BCrypt.slowerBcryptHashingPolicy t
   return (fromJust mb)
 
-hashUser :: RawUser -> IO User
-hashUser rawUser = do
-  hashedPW <- hashPassword (ruPassword rawUser )
-  return User {
-    userName = ruName rawUser,
-    userEmail = ruEmail rawUser,
-    userHashedPassword = hashedPW
-  }
+hashUser :: NewUser -> IO User
+hashUser (NewUser name email pw) = do
+  hashedPW <- hashPassword pw
+  return User
+    { userName           = name
+    , userEmail          = email
+    , userHashedPassword = hashedPW
+    }
 
-createUserPG :: ConnectionString -> RawUser -> IO Int64
-createUserPG connString rawUser = do
-  hashedUser <- hashUser rawUser
+createUserPG :: ConnectionString -> NewUser -> IO Int64
+createUserPG connString newUser = do
+  hashedUser   <- hashUser newUser
   insertedUser <- runAction connString (insert hashedUser)
   return (fromSqlKey insertedUser)
 
+createGetUserPG :: ConnectionString -> NewUser -> IO (Maybe User)
+createGetUserPG connString newUser = do
+  newUserKeyInt <- createUserPG connString newUser
+  fetchUserPG connString newUserKeyInt
+
 deleteUserPG :: ConnectionString -> Int64 -> IO ()
 deleteUserPG connString uid = runAction connString (delete userKey)
-  where
-    userKey :: Key User
-    userKey = toSqlKey uid
+ where
+  userKey :: Key User
+  userKey = toSqlKey uid

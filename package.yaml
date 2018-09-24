@@ -24,6 +24,7 @@ dependencies:
 - aeson
 - bcrypt
 - bytestring
+- hlint
 - monad-logger
 - mtl
 - persistent
