@@ -40,7 +40,7 @@ import           Database.Persist.Postgresql    ( Connection
 import           Schema
 
 localConnString :: ConnectionString
-localConnString = "host=127.0.0.1 port=5432 user=postgres dbname=postgres"
+localConnString = "host=db port=5432 user=myblog dbname=myblog password=myblog"
 
 -- This is IO since in a real application we'd want to configure it.
 fetchPostgresConnection :: IO ConnectionString

@@ -1,22 +1,20 @@
-version: '2.1'
-
+version: '3'
 services:
   db:
-    environment:
-      POSTGRES_DB: myblog_development
-      POSTGRES_USER: myblog
-    image: postgres
+    image: 'postgres:10'
     ports:
       - '5433:5432'
-    restart: always
+    environment:
+      POSTGRES_DB: myblog
+      POSTGRES_USER: myblog
+      POSTGRES_PASSWORD: myblog
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile.yml
+    build: .
     depends_on:
       - db
-    environment:
-      DATABASE_URL: postgres://myblog:@db:5432/myblog_development
     ports:
-      - '8080:8080'
+      - '3001:3001'
+    volumes:
+      - .:/project
+    restart: on-failure
