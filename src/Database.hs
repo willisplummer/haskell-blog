@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Database where
 
 import           Control.Monad.Logger           ( runStdoutLoggingT
@@ -17,7 +15,8 @@ import qualified Data.ByteString                as BS ( ByteString )
 import           Data.Maybe                     ( fromJust )
 import           Data.Pool                      ( Pool )
 
-import           Database.Persist               ( entityVal
+import           Database.Persist               ( entityKey
+                                                , entityVal
                                                 , selectFirst
                                                 , get
                                                 , insert
@@ -31,20 +30,15 @@ import           Database.Persist.Sql           ( fromSqlKey
                                                 )
 import           Database.Persist.Postgresql    ( Connection
                                                 , ConnectionString
+                                                , PostgresConf(..)
                                                 , withPostgresqlConn
                                                 , runMigration
                                                 , runMigrationUnsafe
                                                 , SqlPersistT
                                                 )
+import            System.Environment
 
 import           Schema
-
-localConnString :: ConnectionString
-localConnString = "host=db port=5432 user=myblog dbname=myblog password=myblog"
-
--- This is IO since in a real application we'd want to configure it.
-fetchPostgresConnection :: IO ConnectionString
-fetchPostgresConnection = return localConnString
 
 runAction :: ConnectionString -> SqlPersistT (LoggingT IO) a -> IO a
 runAction connectionString action =
@@ -58,6 +52,13 @@ migrateDB connString = runAction connString (runMigrationUnsafe migrateAll)
 fetchUsersPG :: ConnectionString -> IO [User]
 fetchUsersPG connString = do
   entities <- runAction connString (selectList [] [])
+  return (fmap entityVal entities)
+
+fetchPostsPG :: ConnectionString -> BS.ByteString -> IO [Schema.Post]
+fetchPostsPG connString email = do
+  entity <- runAction connString (selectFirst [UserEmail ==. email] [])
+  let userId = fromJust $ fmap entityKey entity
+  entities <- runAction connString $ selectList [PostUser ==. userId] []
   return (fmap entityVal entities)
 
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe User)

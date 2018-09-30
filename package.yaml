@@ -28,8 +28,8 @@ dependencies:
 - monad-logger
 - mtl
 - persistent
-- persistent-template
 - persistent-postgresql
+- persistent-template
 - resource-pool
 - servant
 - servant-auth
@@ -38,6 +38,7 @@ dependencies:
 - string-conversions
 - text
 - transformers
+- uri-bytestring
 - wai
 - warp
 

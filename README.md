@@ -1,21 +1,22 @@
 # My Blog
 
-```
-stack build
-stack exec start-server
-```
+## Local Development
 
 ```
-curl -H 'Content-type: application/json' localhost:3000/user --data '{"name": "Alice", "age": 42}'
-curl -H 'Content-type: application/json' localhost:3000/user/Alice
+docker-compose up web
+docker-compose run web stack exec migrate-db
 ```
 
-h/t https://github.com/haskell-servant/example-servant-persistent
+## Deploy
 
-https://mmhaskell.com/web-skills-1
+[deploy to heroku via docker registry](https://devcenter.heroku.com/articles/container-registry-and-runtime#building-and-pushing-image-s)
+
+```
+heroku container:push web -a haskell-blog
+heroku container:release web -a haskell-blog
+heroku open -a haskell-blog
+```
 
 ## TODO
 
-- Environment variables
-- Working docker-compose
-- Reorganize Files
+[ ] look into using [release phase](https://devcenter.heroku.com/articles/release-phase) to run migrations as part of deploy

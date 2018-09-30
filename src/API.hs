@@ -21,7 +21,7 @@ import           Data.Aeson.Types               ( Parser
                                                 , Pair
                                                 )
 import qualified Data.ByteString.Char8          as BS ( ByteString )
-import qualified Data.ByteString.Char8          as B8 ( pack )
+import qualified Data.ByteString.Char8          as B8 ( pack, unpack )
 import           Data.Int                       ( Int64 )
 import           Data.Maybe                     ( fromJust )
 import           Data.Proxy                     ( Proxy(..) )
@@ -63,8 +63,8 @@ import           Servant.Auth.Server            ( Auth
                                                 )
 import           System.IO
 
-import           Schema (NewUser(..), PresentationalUser(..), User, presentationalizeUser, userHashedPassword)
-import           Database (createGetUserPG, fetchPostgresConnection, fetchUserByEmailPG, fetchUsersPG)
+import           Schema (NewUser(..), PresentationalUser(..), User, Post, presentationalizeUser, userHashedPassword)
+import           Database (createGetUserPG, fetchUserByEmailPG, fetchUsersPG, fetchPostsPG)
 
 instance ToJWT PresentationalUser
 instance FromJWT PresentationalUser
@@ -117,22 +117,25 @@ createNewUser cookieSettings jwtSettings connString newUser =
     case mApplyCookies of
       Nothing           -> throwError err401
       Just applyCookies -> return $ applyCookies NoContent
-createNewUser _ _ _ _ = throwError err401
 
 fetchUsersHandler :: ConnectionString -> Handler [User]
 fetchUsersHandler connString = liftIO $ fetchUsersPG connString
+
+fetchPostsHandler :: ConnectionString -> BS.ByteString -> Handler [Schema.Post]
+fetchPostsHandler connString email = liftIO $ fetchPostsPG connString email
 
 type Protected
    = "name" :> Get '[JSON] BS.ByteString
  :<|> "email" :> Get '[JSON] BS.ByteString
  :<|> "users" :> Get '[JSON] [User]
+ :<|> "posts" :> Get '[JSON] [Schema.Post]
 
 -- | 'Protected' will be protected by 'auths', which we still have to specify.
 protected :: ConnectionString -> AuthResult PresentationalUser -> Server Protected
 -- If we get an "Authenticated v", we can trust the information in v, since
 -- it was signed by a key we trust.
 protected connString (Servant.Auth.Server.Authenticated (PUser name email)) =
-  return name :<|> return email :<|> fetchUsersHandler connString
+  return name :<|> return email :<|> fetchUsersHandler connString :<|> fetchPostsHandler connString email 
 -- Otherwise, we return a 401.
 protected _ _ = throwAll err401
 
@@ -173,12 +176,11 @@ mkApp connString = do
       api    = Proxy :: Proxy (API '[JWT])
   pure $ serveWithContext api cfg (server defaultCookieSettings jwtCfg connString)
 
-port :: Int
-port = 3001
 
-runServer :: IO ()
-runServer = do
-  connString <- fetchPostgresConnection
+runServer :: Int -> ConnectionString -> IO ()
+runServer port connString = do
+  putStrLn "connString:" 
+  putStrLn $ B8.unpack connString
   let settings =
         setPort port
           $ setBeforeMainLoop

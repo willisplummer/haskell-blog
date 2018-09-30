@@ -24,11 +24,13 @@ import           Data.Aeson                     ( ToJSON
                                                 , defaultOptions
                                                 , fieldLabelModifier
                                                 , genericParseJSON
+                                                , genericToJSON
                                                 )
 import           Data.Aeson.Types               ( Parser
                                                 , Pair
                                                 )
 import           Data.Char                      ( toLower )
+import           Data.Text                      ( Text )
 import           Database.Persist               ( Entity(..)
                                                 , Entity
                                                 )
@@ -52,15 +54,30 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     hashedPassword BS.ByteString
     UniqueEmail email
     deriving Show Read
+  Post sql=posts
+    title BS.ByteString
+    body Text
+    user UserId
+    deriving Show Read Generic
 |]
+
+instance ToJSON Post
+instance FromJSON Post
 
 data PresentationalUser = PUser {
   puName :: BS.ByteString,
   puEmail :: BS.ByteString
 } deriving (Eq, Show, Read, Generic)
 
-instance ToJSON PresentationalUser
-instance FromJSON PresentationalUser
+instance ToJSON PresentationalUser where
+  toJSON = genericToJSON defaultOptions {
+    fieldLabelModifier = map toLower . drop 2
+  }
+
+instance FromJSON PresentationalUser where
+  parseJSON = genericParseJSON defaultOptions {
+    fieldLabelModifier = map toLower . drop 2
+  }
 
 presentationalizeUser :: User -> PresentationalUser
 presentationalizeUser (User name email pw) = PUser name email

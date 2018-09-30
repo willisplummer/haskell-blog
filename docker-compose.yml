@@ -18,3 +18,6 @@ services:
     volumes:
       - .:/project
     restart: on-failure
+    environment:
+      DATABASE_URL: postgres://myblog:myblog@db:5432/myblog
+      PORT: 3001
