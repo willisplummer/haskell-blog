@@ -4,14 +4,19 @@ import           Control.Monad.Logger           ( runStdoutLoggingT
                                                 , MonadLogger
                                                 , LoggingT
                                                 )
-import           Control.Monad.Reader           ( join, runReaderT )
-import           Control.Monad.IO.Class         ( MonadIO, liftIO )
+import           Control.Monad.Reader           ( join
+                                                , runReaderT
+                                                )
+import           Control.Monad.IO.Class         ( MonadIO
+                                                , liftIO
+                                                )
 import           Crypto.BCrypt                  ( validatePassword
                                                 , hashPasswordUsingPolicy
                                                 , slowerBcryptHashingPolicy
                                                 )
 import           Data.Int                       ( Int64 )
-import qualified Data.ByteString                as BS ( ByteString )
+import qualified Data.ByteString               as BS
+                                                ( ByteString )
 import           Data.Pool                      ( Pool )
 
 import           Database.Persist               ( entityKey
@@ -35,7 +40,7 @@ import           Database.Persist.Postgresql    ( Connection
                                                 , runMigrationUnsafe
                                                 , SqlPersistT
                                                 )
-import            System.Environment
+import           System.Environment
 
 import           Schema
 
@@ -66,11 +71,9 @@ fetchPostsPG connString email = do
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe User)
 fetchUserPG connString uid = runAction connString (get (toSqlKey uid))
 
-fetchUserByEmailPG
-  :: ConnectionString -> BS.ByteString -> IO (Maybe User)
+fetchUserByEmailPG :: ConnectionString -> BS.ByteString -> IO (Maybe User)
 fetchUserByEmailPG connString email = do
-  entity <- runAction connString
-                      (selectFirst [UserEmail ==. email] [])
+  entity <- runAction connString (selectFirst [UserEmail ==. email] [])
   return (fmap entityVal entity)
 
 fetchUserByEmailViaConnectionPG
@@ -81,27 +84,31 @@ fetchUserByEmailViaConnectionPG connection email = do
   return (fmap entityVal entity)
 
 hashPassword :: BS.ByteString -> IO (Maybe BS.ByteString)
-hashPassword = Crypto.BCrypt.hashPasswordUsingPolicy Crypto.BCrypt.slowerBcryptHashingPolicy
+hashPassword =
+  Crypto.BCrypt.hashPasswordUsingPolicy Crypto.BCrypt.slowerBcryptHashingPolicy
 
 hashUser :: NewUser -> IO (Maybe User)
 hashUser (NewUser name email pw) = do
   mHashedPW <- hashPassword pw
-  return $ (\hashedPW -> User
-    { userName           = name
-    , userEmail          = email
-    , userHashedPassword = hashedPW
-    }) <$> mHashedPW
+  return
+    $   (\hashedPW -> User
+          { userName           = name
+          , userEmail          = email
+          , userHashedPassword = hashedPW
+          }
+        )
+    <$> mHashedPW
 
 createUserPG :: ConnectionString -> NewUser -> IO (Maybe Int64)
 createUserPG connString newUser = do
-  mHashedUser <- hashUser newUser
+  mHashedUser  <- hashUser newUser
   insertedUser <- sequence (runAction connString <$> (insert <$> mHashedUser))
   return (fromSqlKey <$> insertedUser)
 
 createGetUserPG :: ConnectionString -> NewUser -> IO (Maybe User)
 createGetUserPG connString newUser = do
   newUserKeyInt <- createUserPG connString newUser
-  fetchedUser <- sequence $ fetchUserPG connString <$> newUserKeyInt
+  fetchedUser   <- sequence $ fetchUserPG connString <$> newUserKeyInt
   return (join fetchedUser)
 
 deleteUserPG :: ConnectionString -> Int64 -> IO ()

@@ -35,8 +35,8 @@ import           Database.Persist               ( Entity(..)
                                                 , Entity
                                                 )
 import qualified Database.Persist.TH           as PTH
-import qualified Data.ByteString            as BS
-import qualified Data.ByteString.Char8      as B8
+import qualified Data.ByteString               as BS
+import qualified Data.ByteString.Char8         as B8
 import           GHC.Generics
 
 instance FromJSON BS.ByteString where
@@ -83,7 +83,7 @@ presentationalizeUser :: User -> PresentationalUser
 presentationalizeUser (User name email pw) = PUser name email
 
 instance ToJSON User where
-  toJSON = toJSON . presentationalizeUser 
+  toJSON = toJSON . presentationalizeUser
 
 -- rename as signup data
 data NewUser = NewUser {
