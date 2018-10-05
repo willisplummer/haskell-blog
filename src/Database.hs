@@ -4,7 +4,7 @@ import           Control.Monad.Logger           ( runStdoutLoggingT
                                                 , MonadLogger
                                                 , LoggingT
                                                 )
-import           Control.Monad.Reader           ( runReaderT )
+import           Control.Monad.Reader           ( join, runReaderT )
 import           Control.Monad.IO.Class         ( MonadIO, liftIO )
 import           Crypto.BCrypt                  ( validatePassword
                                                 , hashPasswordUsingPolicy
@@ -57,9 +57,12 @@ fetchUsersPG connString = do
 fetchPostsPG :: ConnectionString -> BS.ByteString -> IO [Schema.Post]
 fetchPostsPG connString email = do
   entity <- runAction connString (selectFirst [UserEmail ==. email] [])
-  let userId = fromJust $ fmap entityKey entity
-  entities <- runAction connString $ selectList [PostUser ==. userId] []
-  return (fmap entityVal entities)
+  let userId = entityKey <$> entity
+  case userId of
+    Just id -> do
+      entities <- runAction connString $ selectList [PostUser ==. id] []
+      return (fmap entityVal entities)
+    Nothing -> return []
 
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe User)
 fetchUserPG connString uid = runAction connString (get (toSqlKey uid))
@@ -78,31 +81,29 @@ fetchUserByEmailViaConnectionPG connection email = do
                        (connection :: SqlBackend)
   return (fmap entityVal entity)
 
-hashPassword :: BS.ByteString -> IO (BS.ByteString)
-hashPassword t = do
-  mb <- Crypto.BCrypt.hashPasswordUsingPolicy
-    Crypto.BCrypt.slowerBcryptHashingPolicy t
-  return (fromJust mb)
+hashPassword :: BS.ByteString -> IO (Maybe BS.ByteString)
+hashPassword = Crypto.BCrypt.hashPasswordUsingPolicy Crypto.BCrypt.slowerBcryptHashingPolicy
 
-hashUser :: NewUser -> IO User
+hashUser :: NewUser -> IO (Maybe User)
 hashUser (NewUser name email pw) = do
-  hashedPW <- hashPassword pw
-  return User
+  mHashedPW <- hashPassword pw
+  return $ (\hashedPW -> User
     { userName           = name
     , userEmail          = email
     , userHashedPassword = hashedPW
-    }
+    }) <$> mHashedPW
 
-createUserPG :: ConnectionString -> NewUser -> IO Int64
+createUserPG :: ConnectionString -> NewUser -> IO (Maybe Int64)
 createUserPG connString newUser = do
-  hashedUser   <- hashUser newUser
-  insertedUser <- runAction connString (insert hashedUser)
-  return (fromSqlKey insertedUser)
+  mHashedUser <- hashUser newUser
+  insertedUser <- sequence (runAction connString <$> (insert <$> mHashedUser))
+  return (fromSqlKey <$> insertedUser)
 
 createGetUserPG :: ConnectionString -> NewUser -> IO (Maybe User)
 createGetUserPG connString newUser = do
   newUserKeyInt <- createUserPG connString newUser
-  fetchUserPG connString newUserKeyInt
+  fetchedUser <- sequence $ fetchUserPG connString <$> newUserKeyInt
+  return (join fetchedUser)
 
 deleteUserPG :: ConnectionString -> Int64 -> IO ()
 deleteUserPG connString uid = runAction connString (delete userKey)

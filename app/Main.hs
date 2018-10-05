@@ -3,7 +3,6 @@
 module Main where
 
 import System.Environment
-import Data.Maybe ( fromJust )
 import Database.Persist.Postgresql (PostgresConf(..))
 
 import API (runServer)

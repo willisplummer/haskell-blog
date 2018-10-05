@@ -85,6 +85,7 @@ presentationalizeUser (User name email pw) = PUser name email
 instance ToJSON User where
   toJSON = toJSON . presentationalizeUser 
 
+-- rename as signup data
 data NewUser = NewUser {
     nuUserName :: BS.ByteString
   , nuEmail :: BS.ByteString
