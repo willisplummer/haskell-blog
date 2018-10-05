@@ -12,7 +12,6 @@ import           Crypto.BCrypt                  ( validatePassword
                                                 )
 import           Data.Int                       ( Int64 )
 import qualified Data.ByteString                as BS ( ByteString )
-import           Data.Maybe                     ( fromJust )
 import           Data.Pool                      ( Pool )
 
 import           Database.Persist               ( entityKey
