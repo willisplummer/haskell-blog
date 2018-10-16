@@ -27,7 +27,6 @@ import qualified Data.ByteString.Char8         as B8
                                                 , unpack
                                                 )
 import           Data.Int                       ( Int64 )
-import           Data.Maybe                     ( fromJust )
 import           Data.Proxy                     ( Proxy(..) )
 import           Data.Text                      ( Text )
 import           Data.Text.Encoding             ( encodeUtf8 )
@@ -102,19 +101,22 @@ checkCreds
              SetCookie]
            NoContent
        )
+
 checkCreds cookieSettings jwtSettings connString (Login email password) = do
   mUser         <- liftIO $ fetchUserByEmailPG connString email
-  mApplyCookies <-
-    if validatePassword (userHashedPassword $ fromJust mUser) password
-      then
-        liftIO
-        $ acceptLogin cookieSettings jwtSettings
-        $ presentationalizeUser
-        $ fromJust mUser
-      else throwError err401
-  case mApplyCookies of
-    Nothing           -> throwError err401
-    Just applyCookies -> return $ applyCookies NoContent
+  case mUser of
+    Nothing -> throwError err401
+    Just user -> do
+      mApplyCookies <-
+        if validatePassword (userHashedPassword user) password
+          then
+            liftIO
+            $ acceptLogin cookieSettings jwtSettings
+            $ presentationalizeUser user
+          else throwError err401
+      case mApplyCookies of
+        Nothing           -> throwError err401
+        Just applyCookies -> return $ applyCookies NoContent
 
 -- Here is the signup handler
 createNewUser
@@ -131,14 +133,17 @@ createNewUser
        )
 createNewUser cookieSettings jwtSettings connString newUser = do
   mUser         <- liftIO $ createGetUserPG connString newUser
-  mApplyCookies <-
-    liftIO
-    $ acceptLogin cookieSettings jwtSettings
-    $ presentationalizeUser
-    $ fromJust mUser
-  case mApplyCookies of
-    Nothing           -> throwError err401
-    Just applyCookies -> return $ applyCookies NoContent
+  case mUser of
+    Nothing -> throwError err401
+    Just user -> do
+      mApplyCookies <-
+        liftIO
+        $ acceptLogin cookieSettings jwtSettings
+        $ presentationalizeUser
+        $ user
+      case mApplyCookies of
+        Nothing           -> throwError err401
+        Just applyCookies -> return $ applyCookies NoContent
 
 fetchUsersHandler :: ConnectionString -> Handler [User]
 fetchUsersHandler connString = liftIO $ fetchUsersPG connString
