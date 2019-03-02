@@ -20,6 +20,9 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/willisplummer/myblog#readme>
 
 dependencies:
+- test-framework
+- test-framework-hunit
+- HUnit
 - base >= 4.7 && < 5
 - aeson
 - bcrypt
