@@ -96,3 +96,11 @@ instance FromJSON NewUser where
   parseJSON = genericParseJSON defaultOptions {
     fieldLabelModifier = map toLower . drop 2
   }
+
+data Judgeable = Judgeable {
+  jName :: BS.ByteString
+, jImageUrl :: BS.ByteString
+, jId :: Int
+} deriving (Eq, Show, Read, Generic)
+
+instance ToJSON Judgeable
