@@ -7,6 +7,8 @@ docker-compose up web
 docker-compose run web stack exec migrate-db
 ```
 
+when you make changes just run `docker-compose build`
+
 ## Tests
 
 Right now I'm using test-framework and HUnit but I've read good things about using [tasty](https://github.com/feuerbach/tasty)

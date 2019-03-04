@@ -88,6 +88,15 @@ data Login = Login { email :: BS.ByteString, password :: BS.ByteString }
 instance ToJSON Login
 instance FromJSON Login
 
+data Judgeable = Judgeable { id :: Int64, name :: BS.ByteString, imageUrl :: BS.ByteString }
+   deriving (Eq, Show, Read, Generic)
+
+instance ToJSON Judgeable
+instance FromJSON Judgeable
+
+banana :: Judgeable
+banana = Judgeable 1 "banana" "url goes here"
+
 -- Here is the login handler
 checkCreds
   :: CookieSettings
