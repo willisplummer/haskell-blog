@@ -43,7 +43,7 @@ POST `/login` - authenticate
 _authenticated routes_
 GET `/judgeables` - get judgeables index
 GET `/judgeables/id` - get judgeable by id
-POST `/judgeables/new` - create new judgeable
-POST `/judgeables/id/judgements/new` - create judgement for judgeable item
+POST `/judgeables` - create new judgeable
+POST `/judgeables/id/judgements` - create judgement for judgeable item
 GET `/users/id/judgements` - get all judgements for a user
 POST `/users/id/subscribe` - create a subscription to a user's judgements

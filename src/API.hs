@@ -95,32 +95,11 @@ data Judgeable = Judgeable { id :: Int64, name :: BS.ByteString, imageUrl :: BS.
 instance ToJSON Judgeable
 instance FromJSON Judgeable
 
-banana :: Judgeable
-banana = Judgeable 1 "banana" "url goes here"
-
-createNewJudgeableHandler
-  :: ConnectionString
-  -> Judgeable
-  -> Handler Judgeable
-createNewJudgeableHandler connString judgeable = return judgeable
-
-
 data Judgement = Judgement { judgeableId :: Int64, userId :: Key User, isGood :: Bool }
    deriving (Eq, Show, Read, Generic)
 
 instance ToJSON Judgement
 instance FromJSON Judgement
-
-createNewJudgementHandler
-  :: ConnectionString
-  -> Key User
-  -> Int64
-  -> Bool
-  -> Handler Judgement
-createNewJudgementHandler connString userId judgeableId isGood =
-  return
-  $ Judgement judgeableId userId isGood
-
 
 -- Here is the login handler
 checkCreds
@@ -184,19 +163,46 @@ fetchUsersHandler connString = liftIO $ fetchUsersPG connString
 fetchPostsHandler :: ConnectionString -> BS.ByteString -> Handler [Schema.Post]
 fetchPostsHandler connString email = liftIO $ fetchPostsPG connString email
 
+type JudgeablesAPI = 
+  "judgeables" :> Get '[JSON] [Judgeable]
+  :<|> "judgeables" :> Capture "id" Int64 :> Get '[JSON] Judgeable
+  :<|> "judgeables" :> ReqBody '[JSON] Judgeable :> Servant.API.Post '[JSON] Judgeable
+  :<|> "judgeables" :> Capture "id" Int64 :> "judgements" :> ReqBody '[JSON] Bool :> Servant.API.Post '[JSON] Judgement
+
+judgeablesServer :: PresentationalUser -> Server JudgeablesAPI
+judgeablesServer currentUser =
+  return [banana]
+  :<|> (\_id -> return banana)
+  :<|> (\newJudgeable -> return newJudgeable)
+  :<|> (\judgeableId isGood -> return $ Judgement judgeableId (pId currentUser) isGood)
+  where
+    banana = Judgeable 1 "banana" "url goes here"
+
+userSubscribeHandler :: PresentationalUser -> Int64 -> m1 -> Handler PresentationalUser
+userSubscribeHandler currentUser id reqBody = return currentUser
+
+type UsersAPI =
+  "users" :> Get '[JSON] [PresentationalUser]
+  :<|> "users" :> Capture "id" Int64 :> Get '[JSON] PresentationalUser
+  :<|> "users" :> Capture "id" Int64 :> "subscribe" :> Servant.API.Post '[JSON] PresentationalUser
+
+usersServer :: PresentationalUser -> Server UsersAPI
+usersServer currentUser =
+  return [currentUser]
+  :<|> (\_id -> return currentUser)
+  :<|> (\_id -> return currentUser)
+
 type Protected =
- "judgeable" :> Capture "id" Int64 :> "judgements" :> "new" :> ReqBody '[JSON] Bool :> Servant.API.Post '[JSON] Judgement
- :<|> "judgeable" :> "new" :> ReqBody '[JSON] Judgeable :> Servant.API.Post '[JSON] Judgeable
- :<|> "judgeable" :> Get '[JSON] Judgeable
+  JudgeablesAPI
+  :<|> UsersAPI
 
 -- | 'Protected' will be protected by 'auths', which we still have to specify.
 protected :: ConnectionString -> AuthResult PresentationalUser -> Server Protected
 -- If we get an "Authenticated v", we can trust the information in v, since
 -- it was signed by a key we trust.
-protected connString (Servant.Auth.Server.Authenticated (PUser name email id)) =
-  createNewJudgementHandler connString id
-    :<|> createNewJudgeableHandler connString
-    :<|> return banana
+protected connString (Servant.Auth.Server.Authenticated currentUser) =
+  judgeablesServer currentUser
+  :<|> usersServer currentUser
 -- Otherwise, we return a 401.
 protected _ _ = throwAll err401
 
