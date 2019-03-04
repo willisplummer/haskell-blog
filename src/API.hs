@@ -46,7 +46,7 @@ import           Network.Wai.Handler.Warp       ( defaultSettings
                                                 , setPort
                                                 )
 import           Servant
-import           Servant.API
+import           Servant.API                    
 import           Servant.Auth
 import           Servant.Auth.Server            ( Auth
                                                 , AuthResult(..)
@@ -70,12 +70,12 @@ import           System.IO
 import           Schema                         ( NewUser(..)
                                                 , PresentationalUser(..)
                                                 , User
-                                                , Post
                                                 , presentationalizeUser
                                                 , userHashedPassword
                                                 )
 import           Database                       ( createGetUserPG
                                                 , fetchUserByEmailPG
+                                                , fetchUserPG
                                                 , fetchUsersPG
                                                 , fetchPostsPG
                                                 )
@@ -101,8 +101,61 @@ data Judgement = Judgement { judgeableId :: Int64, userId :: Key User, isGood ::
 instance ToJSON Judgement
 instance FromJSON Judgement
 
--- Here is the login handler
-checkCreds
+type JudgeablesAPI = 
+  "judgeables" :> Get '[JSON] [Judgeable]
+  :<|> "judgeables" :> Capture "id" Int64 :> Get '[JSON] Judgeable
+  :<|> "judgeables" :> ReqBody '[JSON] Judgeable :> Post '[JSON] Judgeable
+  :<|> "judgeables" :> Capture "id" Int64 :> "judgements" :> ReqBody '[JSON] Bool :> Post '[JSON] Judgement
+
+judgeablesServer :: PresentationalUser -> Server JudgeablesAPI
+judgeablesServer currentUser =
+  return [banana]
+  :<|> (\_id -> return banana)
+  :<|> (\newJudgeable -> return newJudgeable)
+  :<|> (\judgeableId isGood -> return $ Judgement judgeableId (pId currentUser) isGood)
+  where
+    banana = Judgeable 1 "banana" "url goes here"   
+
+type UsersAPI =
+  "users" :> Get '[JSON] [Entity User]
+  :<|> "users" :> Capture "id" Int64 :> Get '[JSON] (Entity User)
+  :<|> "users" :> Capture "id" Int64 :> "subscribe" :> Servant.API.PostNoContent '[JSON] NoContent
+
+usersServer :: ConnectionString -> PresentationalUser -> Server UsersAPI
+usersServer connString currentUser =
+  getUsersHandler connString
+  :<|> getUserHandler connString
+  :<|> subscribeToUserHandler connString currentUser
+  where
+    getUsersHandler :: ConnectionString -> Handler [Entity User]
+    getUsersHandler connString = liftIO $ fetchUsersPG connString
+
+    getUserHandler :: ConnectionString -> Int64 -> Handler (Entity User)
+    getUserHandler connString id = do
+      mUser <- liftIO $ fetchUserPG connString id
+      case mUser of
+        Nothing           -> throwError err404
+        Just user -> return user
+
+    -- TODO: Actually handle the request
+    subscribeToUserHandler :: ConnectionString -> PresentationalUser -> Int64 -> Handler NoContent 
+    subscribeToUserHandler connString currentUser subscribeToId = return NoContent
+
+type Protected =
+  JudgeablesAPI
+  :<|> UsersAPI
+
+-- | 'Protected' will be protected by 'auths', which we still have to specify.
+protected :: ConnectionString -> AuthResult PresentationalUser -> Server Protected
+-- If we get an "Authenticated v", we can trust the information in v, since
+-- it was signed by a key we trust.
+protected connString (Authenticated currentUser) =
+  judgeablesServer currentUser
+  :<|> usersServer connString currentUser
+-- Otherwise, we return a 401.
+protected _ _ = throwAll err401
+
+loginHandler
   :: CookieSettings
   -> JWTSettings
   -> ConnectionString
@@ -115,7 +168,7 @@ checkCreds
            NoContent
        )
 
-checkCreds cookieSettings jwtSettings connString (Login email password) = do
+loginHandler cookieSettings jwtSettings connString (Login email password) = do
   mUser         <- liftIO $ fetchUserByEmailPG connString email
   case mUser of
     Nothing -> throwError err401
@@ -131,8 +184,7 @@ checkCreds cookieSettings jwtSettings connString (Login email password) = do
         Nothing           -> throwError err401
         Just applyCookies -> return $ applyCookies NoContent
 
--- Here is the signup handler
-createNewUser
+signupHandler
   :: CookieSettings
   -> JWTSettings
   -> ConnectionString
@@ -144,7 +196,7 @@ createNewUser
              SetCookie]
            NoContent
        )
-createNewUser cookieSettings jwtSettings connString newUser = do
+signupHandler cookieSettings jwtSettings connString newUser = do
   mUser         <- liftIO $ createGetUserPG connString newUser
   case mUser of
     Nothing -> throwError err401
@@ -156,55 +208,6 @@ createNewUser cookieSettings jwtSettings connString newUser = do
       case mApplyCookies of
         Nothing           -> throwError err401
         Just applyCookies -> return $ applyCookies NoContent
-
-fetchUsersHandler :: ConnectionString -> Handler [Entity User]
-fetchUsersHandler connString = liftIO $ fetchUsersPG connString
-
-fetchPostsHandler :: ConnectionString -> BS.ByteString -> Handler [Schema.Post]
-fetchPostsHandler connString email = liftIO $ fetchPostsPG connString email
-
-type JudgeablesAPI = 
-  "judgeables" :> Get '[JSON] [Judgeable]
-  :<|> "judgeables" :> Capture "id" Int64 :> Get '[JSON] Judgeable
-  :<|> "judgeables" :> ReqBody '[JSON] Judgeable :> Servant.API.Post '[JSON] Judgeable
-  :<|> "judgeables" :> Capture "id" Int64 :> "judgements" :> ReqBody '[JSON] Bool :> Servant.API.Post '[JSON] Judgement
-
-judgeablesServer :: PresentationalUser -> Server JudgeablesAPI
-judgeablesServer currentUser =
-  return [banana]
-  :<|> (\_id -> return banana)
-  :<|> (\newJudgeable -> return newJudgeable)
-  :<|> (\judgeableId isGood -> return $ Judgement judgeableId (pId currentUser) isGood)
-  where
-    banana = Judgeable 1 "banana" "url goes here"
-
-userSubscribeHandler :: PresentationalUser -> Int64 -> m1 -> Handler PresentationalUser
-userSubscribeHandler currentUser id reqBody = return currentUser
-
-type UsersAPI =
-  "users" :> Get '[JSON] [PresentationalUser]
-  :<|> "users" :> Capture "id" Int64 :> Get '[JSON] PresentationalUser
-  :<|> "users" :> Capture "id" Int64 :> "subscribe" :> Servant.API.PostNoContent '[JSON] NoContent
-
-usersServer :: PresentationalUser -> Server UsersAPI
-usersServer currentUser =
-  return [currentUser]
-  :<|> (\_id -> return currentUser)
-  :<|> (\_id -> return NoContent)
-
-type Protected =
-  JudgeablesAPI
-  :<|> UsersAPI
-
--- | 'Protected' will be protected by 'auths', which we still have to specify.
-protected :: ConnectionString -> AuthResult PresentationalUser -> Server Protected
--- If we get an "Authenticated v", we can trust the information in v, since
--- it was signed by a key we trust.
-protected connString (Servant.Auth.Server.Authenticated currentUser) =
-  judgeablesServer currentUser
-  :<|> usersServer currentUser
--- Otherwise, we return a 401.
-protected _ _ = throwAll err401
 
 type Unprotected =
  ("login"
@@ -218,12 +221,11 @@ type Unprotected =
     :> PostNoContent '[JSON] (Headers '[ Header "Set-Cookie" SetCookie
                                         , Header "Set-Cookie" SetCookie]
                                         NoContent))
-
 unprotected
   :: CookieSettings -> JWTSettings -> ConnectionString -> Server Unprotected
 unprotected cs jwts connString =
-  checkCreds cs jwts connString
-    :<|> createNewUser cs jwts connString
+  loginHandler cs jwts connString
+    :<|> signupHandler cs jwts connString
 
 type API auths = (Servant.Auth.Server.Auth auths PresentationalUser :> Protected) :<|> Unprotected
 

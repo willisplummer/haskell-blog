@@ -45,5 +45,6 @@ GET `/judgeables` - get judgeables index
 GET `/judgeables/id` - get judgeable by id
 POST `/judgeables` - create new judgeable
 POST `/judgeables/id/judgements` - create judgement for judgeable item
-GET `/users/id/judgements` - get all judgements for a user
+GET `/users` - get users
+GET `/users/id/judgements` - get a user's judgements
 POST `/users/id/subscribe` - create a subscription to a user's judgements
