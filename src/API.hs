@@ -191,6 +191,8 @@ type Unprotected =
     :> PostNoContent '[JSON] (Headers '[ Header "Set-Cookie" SetCookie
                                         , Header "Set-Cookie" SetCookie]
                                         NoContent))
+  :<|>
+  ("banana" :> Get '[JSON] Judgeable)
   :<|> Raw
 
 unprotected
@@ -198,6 +200,7 @@ unprotected
 unprotected cs jwts connString =
   checkCreds cs jwts connString
     :<|> createNewUser cs jwts connString
+    :<|> return banana
     :<|> serveDirectoryFileServer "static"
 
 type API auths = (Servant.Auth.Server.Auth auths PresentationalUser :> Protected) :<|> Unprotected
