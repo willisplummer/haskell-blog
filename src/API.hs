@@ -255,6 +255,6 @@ runServer port connString = do
   let settings =
         setPort port
           $ setBeforeMainLoop
-              (hPutStrLn stderr ("listening on port " ++ show port))
-          $ defaultSettings
+            (hPutStrLn stderr ("listening on port " ++ show port))
+            defaultSettings
   runSettings settings =<< mkApp connString
