@@ -33,3 +33,17 @@ heroku open -a haskell-blog
 ## TODO
 
 [ ] look into using [release phase](https://devcenter.heroku.com/articles/release-phase) to run migrations as part of deploy
+
+## API
+
+_unauthenticated routes_
+POST `/signup` - create new user
+POST `/login` - authenticate
+
+_authenticated routes_
+GET `/judgeables` - get judgeables index
+GET `/judgeables/id` - get judgeable by id
+POST `/judgeables/new` - create new judgeable
+POST `/judgeables/id/judgements/new` - create judgement for judgeable item
+GET `/users/id/judgements` - get all judgements for a user
+POST `/users/id/subscribe` - create a subscription to a user's judgements

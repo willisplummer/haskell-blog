@@ -32,6 +32,7 @@ import           Data.Text                      ( Text )
 import           Data.Text.Encoding             ( encodeUtf8 )
 import           Database.Persist               ( Key
                                                 , Entity
+                                                , entityVal
                                                 )
 import           Database.Persist.Sql           ( SqlBackend )
 import           Database.Persist.Postgresql    ( ConnectionString(..)
@@ -97,6 +98,30 @@ instance FromJSON Judgeable
 banana :: Judgeable
 banana = Judgeable 1 "banana" "url goes here"
 
+createNewJudgeableHandler
+  :: ConnectionString
+  -> Judgeable
+  -> Handler Judgeable
+createNewJudgeableHandler connString judgeable = return judgeable
+
+
+data Judgement = Judgement { judgeableId :: Int64, userId :: Key User, isGood :: Bool }
+   deriving (Eq, Show, Read, Generic)
+
+instance ToJSON Judgement
+instance FromJSON Judgement
+
+createNewJudgementHandler
+  :: ConnectionString
+  -> Key User
+  -> Int64
+  -> Bool
+  -> Handler Judgement
+createNewJudgementHandler connString userId judgeableId isGood =
+  return
+  $ Judgement judgeableId userId isGood
+
+
 -- Here is the login handler
 checkCreds
   :: CookieSettings
@@ -117,7 +142,7 @@ checkCreds cookieSettings jwtSettings connString (Login email password) = do
     Nothing -> throwError err401
     Just user -> do
       mApplyCookies <-
-        if validatePassword (userHashedPassword user) password
+        if validatePassword (userHashedPassword $ entityVal user) password
           then
             liftIO
             $ acceptLogin cookieSettings jwtSettings
@@ -148,35 +173,29 @@ createNewUser cookieSettings jwtSettings connString newUser = do
       mApplyCookies <-
         liftIO
         $ acceptLogin cookieSettings jwtSettings
-        $ presentationalizeUser
-        $ user
+        $ presentationalizeUser user
       case mApplyCookies of
         Nothing           -> throwError err401
         Just applyCookies -> return $ applyCookies NoContent
 
-fetchUsersHandler :: ConnectionString -> Handler [User]
+fetchUsersHandler :: ConnectionString -> Handler [Entity User]
 fetchUsersHandler connString = liftIO $ fetchUsersPG connString
 
 fetchPostsHandler :: ConnectionString -> BS.ByteString -> Handler [Schema.Post]
 fetchPostsHandler connString email = liftIO $ fetchPostsPG connString email
 
-type Protected
-   = "name" :> Get '[JSON] BS.ByteString
- :<|> "email" :> Get '[JSON] BS.ByteString
- :<|> "users" :> Get '[JSON] [User]
- :<|> "posts" :> Get '[JSON] [Schema.Post]
- :<|> "banana" :> Get '[JSON] Judgeable
+type Protected =
+ "judgeable" :> Capture "id" Int64 :> "judgements" :> "new" :> ReqBody '[JSON] Bool :> Servant.API.Post '[JSON] Judgement
+ :<|> "judgeable" :> "new" :> ReqBody '[JSON] Judgeable :> Servant.API.Post '[JSON] Judgeable
+ :<|> "judgeable" :> Get '[JSON] Judgeable
 
 -- | 'Protected' will be protected by 'auths', which we still have to specify.
-protected
-  :: ConnectionString -> AuthResult PresentationalUser -> Server Protected
+protected :: ConnectionString -> AuthResult PresentationalUser -> Server Protected
 -- If we get an "Authenticated v", we can trust the information in v, since
 -- it was signed by a key we trust.
-protected connString (Servant.Auth.Server.Authenticated (PUser name email)) =
-  return name
-    :<|> return email
-    :<|> fetchUsersHandler connString
-    :<|> fetchPostsHandler connString email
+protected connString (Servant.Auth.Server.Authenticated (PUser name email id)) =
+  createNewJudgementHandler connString id
+    :<|> createNewJudgeableHandler connString
     :<|> return banana
 -- Otherwise, we return a 401.
 protected _ _ = throwAll err401

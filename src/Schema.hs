@@ -30,9 +30,11 @@ import           Data.Aeson.Types               ( Parser
                                                 , Pair
                                                 )
 import           Data.Char                      ( toLower )
+import           Data.Int                       ( Int64 )
 import           Data.Text                      ( Text )
 import           Database.Persist               ( Entity(..)
                                                 , Entity
+                                                , Key(..)
                                                 )
 import qualified Database.Persist.TH           as PTH
 import qualified Data.ByteString               as BS
@@ -66,7 +68,8 @@ instance FromJSON Post
 
 data PresentationalUser = PUser {
   puName :: BS.ByteString,
-  puEmail :: BS.ByteString
+  puEmail :: BS.ByteString,
+  pId :: Key User
 } deriving (Eq, Show, Read, Generic)
 
 instance ToJSON PresentationalUser where
@@ -79,10 +82,10 @@ instance FromJSON PresentationalUser where
     fieldLabelModifier = map toLower . drop 2
   }
 
-presentationalizeUser :: User -> PresentationalUser
-presentationalizeUser (User name email pw) = PUser name email
+presentationalizeUser :: Entity User -> PresentationalUser
+presentationalizeUser (Entity id (User name email pw)) = PUser name email id
 
-instance ToJSON User where
+instance ToJSON (Entity User) where
   toJSON = toJSON . presentationalizeUser
 
 -- rename as signup data

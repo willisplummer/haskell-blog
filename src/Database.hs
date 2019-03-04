@@ -21,6 +21,7 @@ import           Data.Pool                      ( Pool )
 
 import           Database.Persist               ( entityKey
                                                 , entityVal
+                                                , Entity(..)
                                                 , selectFirst
                                                 , get
                                                 , insert
@@ -53,10 +54,8 @@ runAction connectionString action =
 migrateDB :: ConnectionString -> IO ()
 migrateDB connString = runAction connString (runMigrationUnsafe migrateAll)
 
-fetchUsersPG :: ConnectionString -> IO [User]
-fetchUsersPG connString = do
-  entities <- runAction connString (selectList [] [])
-  return (fmap entityVal entities)
+fetchUsersPG :: ConnectionString -> IO [Entity User]
+fetchUsersPG connString = runAction connString (selectList [] [])
 
 fetchPostsPG :: ConnectionString -> BS.ByteString -> IO [Schema.Post]
 fetchPostsPG connString email = do
@@ -68,13 +67,17 @@ fetchPostsPG connString email = do
       return (fmap entityVal entities)
     Nothing -> return []
 
-fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe User)
-fetchUserPG connString uid = runAction connString (get (toSqlKey uid))
+fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe (Entity User))
+fetchUserPG connString uid = do
+  mUser <- runAction connString (get userKey)
+  return ((\user -> (Entity userKey user)) <$> mUser)
+  where
+    userKey :: Key User
+    userKey = toSqlKey uid
 
-fetchUserByEmailPG :: ConnectionString -> BS.ByteString -> IO (Maybe User)
-fetchUserByEmailPG connString email = do
-  entity <- runAction connString (selectFirst [UserEmail ==. email] [])
-  return (fmap entityVal entity)
+
+fetchUserByEmailPG :: ConnectionString -> BS.ByteString -> IO (Maybe (Entity User))
+fetchUserByEmailPG connString email = runAction connString (selectFirst [UserEmail ==. email] [])
 
 fetchUserByEmailViaConnectionPG
   :: SqlBackend -> BS.ByteString -> IO (Maybe User)
@@ -105,7 +108,7 @@ createUserPG connString newUser = do
   insertedUser <- sequence (runAction connString <$> (insert <$> mHashedUser))
   return (fromSqlKey <$> insertedUser)
 
-createGetUserPG :: ConnectionString -> NewUser -> IO (Maybe User)
+createGetUserPG :: ConnectionString -> NewUser -> IO (Maybe (Entity User))
 createGetUserPG connString newUser = do
   newUserKeyInt <- createUserPG connString newUser
   fetchedUser   <- sequence $ fetchUserPG connString <$> newUserKeyInt
