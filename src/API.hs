@@ -184,13 +184,13 @@ userSubscribeHandler currentUser id reqBody = return currentUser
 type UsersAPI =
   "users" :> Get '[JSON] [PresentationalUser]
   :<|> "users" :> Capture "id" Int64 :> Get '[JSON] PresentationalUser
-  :<|> "users" :> Capture "id" Int64 :> "subscribe" :> Servant.API.Post '[JSON] PresentationalUser
+  :<|> "users" :> Capture "id" Int64 :> "subscribe" :> Servant.API.PostNoContent '[JSON] NoContent
 
 usersServer :: PresentationalUser -> Server UsersAPI
 usersServer currentUser =
   return [currentUser]
   :<|> (\_id -> return currentUser)
-  :<|> (\_id -> return currentUser)
+  :<|> (\_id -> return NoContent)
 
 type Protected =
   JudgeablesAPI
