@@ -165,6 +165,7 @@ type Protected
  :<|> "email" :> Get '[JSON] BS.ByteString
  :<|> "users" :> Get '[JSON] [User]
  :<|> "posts" :> Get '[JSON] [Schema.Post]
+ :<|> "banana" :> Get '[JSON] Judgeable
 
 -- | 'Protected' will be protected by 'auths', which we still have to specify.
 protected
@@ -176,6 +177,7 @@ protected connString (Servant.Auth.Server.Authenticated (PUser name email)) =
     :<|> return email
     :<|> fetchUsersHandler connString
     :<|> fetchPostsHandler connString email
+    :<|> return banana
 -- Otherwise, we return a 401.
 protected _ _ = throwAll err401
 
@@ -191,8 +193,6 @@ type Unprotected =
     :> PostNoContent '[JSON] (Headers '[ Header "Set-Cookie" SetCookie
                                         , Header "Set-Cookie" SetCookie]
                                         NoContent))
-  :<|>
-  ("banana" :> Get '[JSON] Judgeable)
   :<|> Raw
 
 unprotected
@@ -200,7 +200,6 @@ unprotected
 unprotected cs jwts connString =
   checkCreds cs jwts connString
     :<|> createNewUser cs jwts connString
-    :<|> return banana
     :<|> serveDirectoryFileServer "static"
 
 type API auths = (Servant.Auth.Server.Auth auths PresentationalUser :> Protected) :<|> Unprotected
