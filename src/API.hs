@@ -212,14 +212,12 @@ type Unprotected =
     :> PostNoContent '[JSON] (Headers '[ Header "Set-Cookie" SetCookie
                                         , Header "Set-Cookie" SetCookie]
                                         NoContent))
-  :<|> Raw
 
 unprotected
   :: CookieSettings -> JWTSettings -> ConnectionString -> Server Unprotected
 unprotected cs jwts connString =
   checkCreds cs jwts connString
     :<|> createNewUser cs jwts connString
-    :<|> serveDirectoryFileServer "static"
 
 type API auths = (Servant.Auth.Server.Auth auths PresentationalUser :> Protected) :<|> Unprotected
 
