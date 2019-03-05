@@ -56,15 +56,40 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     hashedPassword BS.ByteString
     UniqueEmail email
     deriving Show Read
-  Post sql=posts
-    title BS.ByteString
-    body Text
-    user UserId
-    deriving Show Read Generic
+  Follow sql=follows
+    followerId UserId
+    followedId UserId
+    deriving Show Read
+  Judgeable sql=judgeables
+    name BS.ByteString
+    imageUrl BS.ByteString
+    deriving Show Read
+  Judgement sql=follows
+    judgeableId JudgeableId
+    userId UserId
+    isGood Bool
+    deriving Show Read
 |]
 
-instance ToJSON Post
-instance FromJSON Post
+instance ToJSON Judgeable where
+  toJSON = toJSON
+instance FromJSON Judgeable where
+  parseJSON = parseJSON
+
+instance ToJSON (Entity Judgeable) where
+  toJSON = toJSON
+instance FromJSON (Entity Judgeable) where
+  parseJSON = parseJSON
+
+instance ToJSON Judgement where
+  toJSON = toJSON
+instance FromJSON Judgement where
+  parseJSON = parseJSON
+
+instance ToJSON (Entity Judgement) where
+  toJSON = toJSON
+instance FromJSON (Entity Judgement) where
+  parseJSON = parseJSON
 
 data PresentationalUser = PUser {
   puName :: BS.ByteString,
@@ -88,14 +113,3 @@ presentationalizeUser (Entity id (User name email pw)) = PUser name email id
 instance ToJSON (Entity User) where
   toJSON = toJSON . presentationalizeUser
 
--- rename as signup data
-data NewUser = NewUser {
-    nuUserName :: BS.ByteString
-  , nuEmail :: BS.ByteString
-  , nuPassword :: BS.ByteString
-} deriving (Eq, Show, Read, Generic)
-
-instance FromJSON NewUser where
-  parseJSON = genericParseJSON defaultOptions {
-    fieldLabelModifier = map toLower . drop 2
-  }

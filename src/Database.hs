@@ -17,6 +17,7 @@ import           Crypto.BCrypt                  ( validatePassword
 import           Data.Int                       ( Int64 )
 import qualified Data.ByteString               as BS
                                                 ( ByteString )
+import           Data.NewUser
 import           Data.Pool                      ( Pool )
 
 import           Database.Persist               ( entityKey
@@ -57,16 +58,6 @@ migrateDB connString = runAction connString (runMigrationUnsafe migrateAll)
 fetchUsersPG :: ConnectionString -> IO [Entity User]
 fetchUsersPG connString = runAction connString (selectList [] [])
 
-fetchPostsPG :: ConnectionString -> BS.ByteString -> IO [Schema.Post]
-fetchPostsPG connString email = do
-  entity <- runAction connString (selectFirst [UserEmail ==. email] [])
-  let userId = entityKey <$> entity
-  case userId of
-    Just id -> do
-      entities <- runAction connString $ selectList [PostUser ==. id] []
-      return (fmap entityVal entities)
-    Nothing -> return []
-
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe (Entity User))
 fetchUserPG connString uid = do
   mUser <- runAction connString (get userKey)
@@ -74,7 +65,6 @@ fetchUserPG connString uid = do
   where
     userKey :: Key User
     userKey = toSqlKey uid
-
 
 fetchUserByEmailPG :: ConnectionString -> BS.ByteString -> IO (Maybe (Entity User))
 fetchUserByEmailPG connString email = runAction connString (selectFirst [UserEmail ==. email] [])
@@ -119,3 +109,36 @@ deleteUserPG connString uid = runAction connString (delete userKey)
  where
   userKey :: Key User
   userKey = toSqlKey uid
+
+-- JUDGEABLES
+
+fetchJudgeablesPG :: ConnectionString -> IO [Entity Judgeable]
+fetchJudgeablesPG connString = runAction connString (selectList [] [])
+
+fetchJudgeablePG :: ConnectionString -> Int64 -> IO (Maybe (Entity Judgeable))
+fetchJudgeablePG connString judgeableId = do
+  mJudgeable <- runAction connString (get judgeableKey)
+  return ((\judgeable -> (Entity judgeableKey judgeable)) <$> mJudgeable)
+  where
+    judgeableKey :: Key Judgeable
+    judgeableKey = toSqlKey judgeableId
+
+createJudgeablePG :: ConnectionString -> Judgeable -> IO (Maybe (Entity Judgeable))
+createJudgeablePG connString judgeable = do
+  key <- runAction connString $ insert judgeable
+  fetchJudgeablePG connString $ fromSqlKey key
+
+-- JUDGEMENTS
+
+fetchJudgementPG :: ConnectionString -> Int64 -> IO (Maybe (Entity Judgement))
+fetchJudgementPG connString judgementId = do
+  mJudgement <- runAction connString (get judgementKey)
+  return (Entity judgementKey <$> mJudgement)
+  where
+    judgementKey :: Key Judgement
+    judgementKey = toSqlKey judgementId
+
+createJudgementPG :: ConnectionString -> Judgement -> IO (Maybe (Entity Judgement))
+createJudgementPG connString judgement = do
+  key <- runAction connString $ insert judgement
+  fetchJudgementPG connString $ fromSqlKey key

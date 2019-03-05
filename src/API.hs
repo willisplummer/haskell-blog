@@ -27,6 +27,7 @@ import qualified Data.ByteString.Char8         as B8
                                                 , unpack
                                                 )
 import           Data.Int                       ( Int64 )
+import           Data.NewUser
 import           Data.Proxy                     ( Proxy(..) )
 import           Data.Text                      ( Text )
 import           Data.Text.Encoding             ( encodeUtf8 )
@@ -34,7 +35,7 @@ import           Database.Persist               ( Key
                                                 , Entity
                                                 , entityVal
                                                 )
-import           Database.Persist.Sql           ( SqlBackend )
+import           Database.Persist.Sql           ( SqlBackend, toSqlKey )
 import           Database.Persist.Postgresql    ( ConnectionString(..)
                                                 , fromSqlKey
                                                 )
@@ -67,17 +68,23 @@ import           Servant.Auth.Server            ( Auth
                                                 )
 import           System.IO
 
-import           Schema                         ( NewUser(..)
-                                                , PresentationalUser(..)
+import           Schema                         ( PresentationalUser(..)
                                                 , User
+                                                , Judgeable
+                                                , Judgeable(..)
+                                                , Judgement
+                                                , Judgement(..)
                                                 , presentationalizeUser
                                                 , userHashedPassword
                                                 )
 import           Database                       ( createGetUserPG
+                                                , createJudgeablePG
+                                                , createJudgementPG
                                                 , fetchUserByEmailPG
                                                 , fetchUserPG
                                                 , fetchUsersPG
-                                                , fetchPostsPG
+                                                , fetchJudgeablesPG
+                                                , fetchJudgeablePG
                                                 )
 
 instance ToJWT PresentationalUser
@@ -89,32 +96,48 @@ data Login = Login { email :: BS.ByteString, password :: BS.ByteString }
 instance ToJSON Login
 instance FromJSON Login
 
-data Judgeable = Judgeable { id :: Int64, name :: BS.ByteString, imageUrl :: BS.ByteString }
-   deriving (Eq, Show, Read, Generic)
-
-instance ToJSON Judgeable
-instance FromJSON Judgeable
-
-data Judgement = Judgement { judgeableId :: Int64, userId :: Key User, isGood :: Bool }
-   deriving (Eq, Show, Read, Generic)
-
-instance ToJSON Judgement
-instance FromJSON Judgement
-
 type JudgeablesAPI = 
-  "judgeables" :> Get '[JSON] [Judgeable]
-  :<|> "judgeables" :> Capture "id" Int64 :> Get '[JSON] Judgeable
-  :<|> "judgeables" :> ReqBody '[JSON] Judgeable :> Post '[JSON] Judgeable
-  :<|> "judgeables" :> Capture "id" Int64 :> "judgements" :> ReqBody '[JSON] Bool :> Post '[JSON] Judgement
+  "judgeables" :> Get '[JSON] [Entity Judgeable]
+  :<|> "judgeables" :> Capture "id" Int64 :> Get '[JSON] (Entity Judgeable)
+  :<|> "judgeables" :> ReqBody '[JSON] Judgeable :> Post '[JSON] (Entity Judgeable)
+  :<|> "judgeables" :> Capture "id" Int64 :> "judgements" :> ReqBody '[JSON] Bool :> Post '[JSON] (Entity Judgement)
 
-judgeablesServer :: PresentationalUser -> Server JudgeablesAPI
-judgeablesServer currentUser =
-  return [banana]
-  :<|> (\_id -> return banana)
-  :<|> (\newJudgeable -> return newJudgeable)
-  :<|> (\judgeableId isGood -> return $ Judgement judgeableId (pId currentUser) isGood)
+judgeablesServer :: ConnectionString -> PresentationalUser -> Server JudgeablesAPI
+judgeablesServer connString currentUser =
+  (getJudgeablesHandler connString)
+  :<|> (getJudgeableHandler connString)
+  :<|> (createJudgeableHandler connString)
+  :<|> (createJudgementHandler connString currentUser)
   where
-    banana = Judgeable 1 "banana" "url goes here"   
+    getJudgeablesHandler :: ConnectionString -> Handler [Entity Judgeable]
+    getJudgeablesHandler connString = liftIO $ fetchJudgeablesPG connString
+
+    getJudgeableHandler :: ConnectionString -> Int64 -> Handler (Entity Judgeable)
+    getJudgeableHandler connString judgeableId = do
+      mJudgeable <- liftIO $ fetchJudgeablePG connString judgeableId
+      case mJudgeable of
+        Nothing -> throwError err404
+        Just judgeable -> return judgeable
+
+    createJudgeableHandler :: ConnectionString -> Judgeable -> Handler (Entity Judgeable)
+    createJudgeableHandler connString judgeable = do
+      mJudgeable <- liftIO $ createJudgeablePG connString judgeable
+      case mJudgeable of
+        Nothing -> throwError err422
+        Just judgeable -> return judgeable
+
+    createJudgementHandler :: ConnectionString -> PresentationalUser -> Int64 -> Bool -> Handler (Entity Judgement)
+    createJudgementHandler connString currentUser judgeableId isGood = do
+      mJudgement <- liftIO $ createJudgementPG connString judgement
+      case mJudgement of
+        Nothing -> throwError err422
+        Just judgement -> return judgement
+        where
+          judgeableKey :: Key Judgeable
+          judgeableKey = toSqlKey judgeableId
+
+          judgement :: Judgement
+          judgement = Judgement judgeableKey (pId currentUser) isGood
 
 type UsersAPI =
   "users" :> Get '[JSON] [Entity User]
@@ -150,7 +173,7 @@ protected :: ConnectionString -> AuthResult PresentationalUser -> Server Protect
 -- If we get an "Authenticated v", we can trust the information in v, since
 -- it was signed by a key we trust.
 protected connString (Authenticated currentUser) =
-  judgeablesServer currentUser
+  judgeablesServer connString currentUser
   :<|> usersServer connString currentUser
 -- Otherwise, we return a 401.
 protected _ _ = throwAll err401
