@@ -74,12 +74,15 @@ import           Schema                         ( PresentationalUser(..)
                                                 , Judgeable(..)
                                                 , Judgement
                                                 , Judgement(..)
+                                                , Follow
+                                                , Follow(..)
                                                 , presentationalizeUser
                                                 , userHashedPassword
                                                 )
 import           Database                       ( createGetUserPG
                                                 , createJudgeablePG
                                                 , createJudgementPG
+                                                , createFollowPG
                                                 , fetchUserByEmailPG
                                                 , fetchUserPG
                                                 , fetchUsersPG
@@ -142,7 +145,7 @@ judgeablesServer connString currentUser =
 type UsersAPI =
   "users" :> Get '[JSON] [Entity User]
   :<|> "users" :> Capture "id" Int64 :> Get '[JSON] (Entity User)
-  :<|> "users" :> Capture "id" Int64 :> "subscribe" :> Servant.API.PostNoContent '[JSON] NoContent
+  :<|> "users" :> Capture "id" Int64 :> "follow" :> Servant.API.PostNoContent '[JSON] (Entity Follow)
 
 usersServer :: ConnectionString -> PresentationalUser -> Server UsersAPI
 usersServer connString currentUser =
@@ -161,8 +164,18 @@ usersServer connString currentUser =
         Just user -> return user
 
     -- TODO: Actually handle the request
-    subscribeToUserHandler :: ConnectionString -> PresentationalUser -> Int64 -> Handler NoContent 
-    subscribeToUserHandler connString currentUser subscribeToId = return NoContent
+    subscribeToUserHandler :: ConnectionString -> PresentationalUser -> Int64 -> Handler (Entity Follow) 
+    subscribeToUserHandler connString user followedId = do
+      mFollow <- liftIO $ createFollowPG connString follow
+      case mFollow of
+        Nothing -> throwError err422
+        Just user -> return user
+        where
+          followedKey :: Key User
+          followedKey = toSqlKey followedId
+
+          follow :: Follow
+          follow = Follow (pId currentUser) followedKey
 
 type Protected =
   JudgeablesAPI

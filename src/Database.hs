@@ -142,3 +142,18 @@ createJudgementPG :: ConnectionString -> Judgement -> IO (Maybe (Entity Judgemen
 createJudgementPG connString judgement = do
   key <- runAction connString $ insert judgement
   fetchJudgementPG connString $ fromSqlKey key
+
+-- FOLLOWS
+
+fetchFollowPG :: ConnectionString -> Int64 -> IO (Maybe (Entity Follow))
+fetchFollowPG connString followId = do
+  mFollow <- runAction connString (get followKey)
+  return (Entity followKey <$> mFollow)
+  where
+    followKey :: Key Follow
+    followKey = toSqlKey followId
+
+createFollowPG :: ConnectionString -> Follow -> IO (Maybe (Entity Follow))
+createFollowPG connString follow = do
+  key <- runAction connString $ insert follow
+  fetchFollowPG connString $ fromSqlKey key

@@ -91,6 +91,16 @@ instance ToJSON (Entity Judgement) where
 instance FromJSON (Entity Judgement) where
   parseJSON = parseJSON
 
+instance ToJSON Follow where
+  toJSON = toJSON
+instance FromJSON Follow where
+  parseJSON = parseJSON
+
+instance ToJSON (Entity Follow) where
+  toJSON = toJSON
+instance FromJSON (Entity Follow) where
+  parseJSON = parseJSON
+
 data PresentationalUser = PUser {
   puName :: BS.ByteString,
   puEmail :: BS.ByteString,
