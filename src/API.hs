@@ -151,7 +151,7 @@ usersServer :: ConnectionString -> PresentationalUser -> Server UsersAPI
 usersServer connString currentUser =
   getUsersHandler connString
   :<|> getUserHandler connString
-  :<|> subscribeToUserHandler connString currentUser
+  :<|> followUserHandler connString currentUser
   where
     getUsersHandler :: ConnectionString -> Handler [Entity User]
     getUsersHandler connString = liftIO $ fetchUsersPG connString
@@ -163,9 +163,8 @@ usersServer connString currentUser =
         Nothing           -> throwError err404
         Just user -> return user
 
-    -- TODO: Actually handle the request
-    subscribeToUserHandler :: ConnectionString -> PresentationalUser -> Int64 -> Handler (Entity Follow) 
-    subscribeToUserHandler connString user followedId = do
+    followUserHandler :: ConnectionString -> PresentationalUser -> Int64 -> Handler (Entity Follow) 
+    followUserHandler connString user followedId = do
       mFollow <- liftIO $ createFollowPG connString follow
       case mFollow of
         Nothing -> throwError err422

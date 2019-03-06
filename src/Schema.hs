@@ -64,7 +64,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     name BS.ByteString
     imageUrl BS.ByteString
     deriving Show Read
-  Judgement sql=follows
+  Judgement sql=judgements
     judgeableId JudgeableId
     userId UserId
     isGood Bool

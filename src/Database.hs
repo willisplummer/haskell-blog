@@ -61,7 +61,7 @@ fetchUsersPG connString = runAction connString (selectList [] [])
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe (Entity User))
 fetchUserPG connString uid = do
   mUser <- runAction connString (get userKey)
-  return ((\user -> (Entity userKey user)) <$> mUser)
+  return $ Entity userKey <$> mUser
   where
     userKey :: Key User
     userKey = toSqlKey uid
@@ -118,7 +118,7 @@ fetchJudgeablesPG connString = runAction connString (selectList [] [])
 fetchJudgeablePG :: ConnectionString -> Int64 -> IO (Maybe (Entity Judgeable))
 fetchJudgeablePG connString judgeableId = do
   mJudgeable <- runAction connString (get judgeableKey)
-  return ((\judgeable -> (Entity judgeableKey judgeable)) <$> mJudgeable)
+  return $ Entity judgeableKey <$> mJudgeable
   where
     judgeableKey :: Key Judgeable
     judgeableKey = toSqlKey judgeableId
