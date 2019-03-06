@@ -9,6 +9,8 @@ docker-compose run web stack exec migrate-db
 
 when you make changes just run `docker-compose build`
 
+access the container postgres instance: `docker exec -it myblog_db_1 psql -U myblog`
+
 ## Tests
 
 Right now I'm using test-framework and HUnit but I've read good things about using [tasty](https://github.com/feuerbach/tasty)

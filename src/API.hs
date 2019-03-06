@@ -124,17 +124,17 @@ judgeablesServer connString currentUser =
 
     createJudgeableHandler :: ConnectionString -> Judgeable -> Handler (Entity Judgeable)
     createJudgeableHandler connString judgeable = do
-      mJudgeable <- liftIO $ createJudgeablePG connString judgeable
-      case mJudgeable of
+      mNewJudgeable <- liftIO $ createJudgeablePG connString judgeable
+      case mNewJudgeable of
         Nothing -> throwError err422
-        Just judgeable -> return judgeable
+        Just newJudgeable -> return newJudgeable
 
     createJudgementHandler :: ConnectionString -> PresentationalUser -> Int64 -> Bool -> Handler (Entity Judgement)
     createJudgementHandler connString currentUser judgeableId isGood = do
-      mJudgement <- liftIO $ createJudgementPG connString judgement
-      case mJudgement of
+      mNewJudgement <- liftIO $ createJudgementPG connString judgement
+      case mNewJudgement of
         Nothing -> throwError err422
-        Just judgement -> return judgement
+        Just newJudgement -> return newJudgement
         where
           judgeableKey :: Key Judgeable
           judgeableKey = toSqlKey judgeableId

@@ -50,56 +50,26 @@ instance ToJSON BS.ByteString where
   toJSON = toJSON . B8.unpack
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
-  User sql=users
+  User
     name BS.ByteString
     email BS.ByteString
     hashedPassword BS.ByteString
     UniqueEmail email
     deriving Show Read
-  Follow sql=follows
+  Follow json
     followerId UserId
     followedId UserId
     deriving Show Read
-  Judgeable sql=judgeables
+  Judgeable json
     name BS.ByteString
     imageUrl BS.ByteString
     deriving Show Read
-  Judgement sql=judgements
+  Judgement json
     judgeableId JudgeableId
     userId UserId
     isGood Bool
     deriving Show Read
 |]
-
-instance ToJSON Judgeable where
-  toJSON = toJSON
-instance FromJSON Judgeable where
-  parseJSON = parseJSON
-
-instance ToJSON (Entity Judgeable) where
-  toJSON = toJSON
-instance FromJSON (Entity Judgeable) where
-  parseJSON = parseJSON
-
-instance ToJSON Judgement where
-  toJSON = toJSON
-instance FromJSON Judgement where
-  parseJSON = parseJSON
-
-instance ToJSON (Entity Judgement) where
-  toJSON = toJSON
-instance FromJSON (Entity Judgement) where
-  parseJSON = parseJSON
-
-instance ToJSON Follow where
-  toJSON = toJSON
-instance FromJSON Follow where
-  parseJSON = parseJSON
-
-instance ToJSON (Entity Follow) where
-  toJSON = toJSON
-instance FromJSON (Entity Follow) where
-  parseJSON = parseJSON
 
 data PresentationalUser = PUser {
   puName :: BS.ByteString,
