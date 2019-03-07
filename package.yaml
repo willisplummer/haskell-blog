@@ -43,6 +43,7 @@ dependencies:
 - transformers
 - uri-bytestring
 - wai
+- wai-cors
 - warp
 
 library:

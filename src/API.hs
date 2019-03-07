@@ -46,6 +46,11 @@ import           Network.Wai.Handler.Warp       ( defaultSettings
                                                 , setBeforeMainLoop
                                                 , setPort
                                                 )
+import           Network.Wai.Middleware.Cors    ( cors
+                                                , simpleCorsResourcePolicy
+                                                , corsOrigins
+                                                , corsRequestHeaders
+                                                )
 import           Servant
 import           Servant.API                    
 import           Servant.Auth
@@ -280,9 +285,10 @@ mkApp connString = do
       cfg    = defaultCookieSettings :. jwtCfg :. EmptyContext
       --- Here we actually make concrete
       api    = Proxy :: Proxy (API '[JWT])
-  pure $ serveWithContext api
+  pure $ cors (\r -> corsPolicy) $ serveWithContext api
                           cfg
                           (server defaultCookieSettings jwtCfg connString)
+    where corsPolicy = Just simpleCorsResourcePolicy { corsOrigins = Nothing, corsRequestHeaders = ["Content-Type"] }
 
 
 runServer :: Int -> ConnectionString -> IO ()
