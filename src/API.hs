@@ -288,7 +288,7 @@ mkApp connString = do
   pure $ cors (\r -> corsPolicy) $ serveWithContext api
                           cfg
                           (server defaultCookieSettings jwtCfg connString)
-    where corsPolicy = Just simpleCorsResourcePolicy { corsOrigins = Nothing, corsRequestHeaders = ["Content-Type"] }
+    where corsPolicy = Just simpleCorsResourcePolicy { corsOrigins = Nothing, corsRequestHeaders =  (corsRequestHeaders simpleCorsResourcePolicy) ++ ["content-type"] }
 
 
 runServer :: Int -> ConnectionString -> IO ()
