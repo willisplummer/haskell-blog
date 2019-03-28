@@ -11,6 +11,14 @@ when you make changes just run `docker-compose build`
 
 access the container postgres instance: `docker exec -it myblog_db_1 psql -U myblog`
 
+## Dropping the database
+
+```
+docker-compose down
+docker-compose build
+docker-compose up web
+```
+
 ## Tests
 
 Right now I'm using test-framework and HUnit but I've read good things about using [tasty](https://github.com/feuerbach/tasty)
