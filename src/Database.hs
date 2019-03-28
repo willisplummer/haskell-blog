@@ -17,6 +17,8 @@ import           Crypto.BCrypt                  ( validatePassword
 import           Data.Int                       ( Int64 )
 import qualified Data.ByteString               as BS
                                                 ( ByteString )
+import qualified Data.ByteString.Char8         as B8
+
 import           Data.NewUser
 import           Data.Pool                      ( Pool )
 
@@ -66,11 +68,11 @@ fetchUserPG connString uid = do
     userKey :: Key User
     userKey = toSqlKey uid
 
-fetchUserByEmailPG :: ConnectionString -> BS.ByteString -> IO (Maybe (Entity User))
+fetchUserByEmailPG :: ConnectionString -> String -> IO (Maybe (Entity User))
 fetchUserByEmailPG connString email = runAction connString (selectFirst [UserEmail ==. email] [])
 
 fetchUserByEmailViaConnectionPG
-  :: SqlBackend -> BS.ByteString -> IO (Maybe User)
+  :: SqlBackend -> String -> IO (Maybe User)
 fetchUserByEmailViaConnectionPG connection email = do
   entity <- runReaderT (selectFirst [UserEmail ==. email] [])
                        (connection :: SqlBackend)
@@ -80,9 +82,18 @@ hashPassword :: BS.ByteString -> IO (Maybe BS.ByteString)
 hashPassword =
   Crypto.BCrypt.hashPasswordUsingPolicy Crypto.BCrypt.slowerBcryptHashingPolicy
 
+  -- instance FromJSON BS.ByteString where
+  --   parseJSON src = do
+  --     str <- parseJSON src
+  --     return $ B8.pack str
+  
+  -- instance ToJSON BS.ByteString where
+  --   toJSON = toJSON . B8.unpack
+
+    
 hashUser :: NewUser -> IO (Maybe User)
 hashUser (NewUser name email pw) = do
-  mHashedPW <- hashPassword pw
+  mHashedPW <- hashPassword $ B8.pack pw
   return
     $   (\hashedPW -> User
           { userName           = name

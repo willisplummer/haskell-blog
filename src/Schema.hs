@@ -41,18 +41,11 @@ import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Char8         as B8
 import           GHC.Generics
 
-instance FromJSON BS.ByteString where
-  parseJSON src = do
-    str <- parseJSON src
-    return $ B8.pack str
-
-instance ToJSON BS.ByteString where
-  toJSON = toJSON . B8.unpack
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
   User
-    name BS.ByteString
-    email BS.ByteString
+    name String
+    email String
     hashedPassword BS.ByteString
     UniqueEmail email
     deriving Show Read
@@ -61,8 +54,8 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     followedId UserId
     deriving Show Read
   Judgeable json
-    name BS.ByteString
-    imageUrl BS.ByteString
+    name String
+    imageUrl String
     deriving Show Read
   Judgement json
     judgeableId JudgeableId
@@ -72,8 +65,8 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
 |]
 
 data PresentationalUser = PUser {
-  puName :: BS.ByteString,
-  puEmail :: BS.ByteString,
+  puName :: String,
+  puEmail :: String,
   pId :: Key User
 } deriving (Eq, Show, Read, Generic)
 

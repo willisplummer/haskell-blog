@@ -98,7 +98,7 @@ import           Database                       ( createGetUserPG
 instance ToJWT PresentationalUser
 instance FromJWT PresentationalUser
 
-data Login = Login { email :: BS.ByteString, password :: BS.ByteString }
+data Login = Login { email :: String, password :: String }
    deriving (Eq, Show, Read, Generic)
 
 instance ToJSON Login
@@ -214,7 +214,7 @@ loginHandler cookieSettings jwtSettings connString (Login email password) = do
     Nothing -> throwError err401
     Just user -> do
       mApplyCookies <-
-        if validatePassword (userHashedPassword $ entityVal user) password
+        if validatePassword (userHashedPassword $ entityVal user) $ B8.pack password
           then
             liftIO
             $ acceptLogin cookieSettings jwtSettings
