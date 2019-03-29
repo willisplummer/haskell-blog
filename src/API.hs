@@ -69,6 +69,7 @@ import           Servant.Auth.Server            ( Auth
                                                 , defaultJWTSettings
                                                 , defaultCookieSettings
                                                 , makeJWT
+                                                , cookieXsrfSetting
                                                 , throwAll
                                                 )
 import           System.IO
@@ -282,13 +283,13 @@ mkApp connString = do
   -- Adding some configurations. All authentications require CookieSettings to
   -- be in the context.
   let jwtCfg = defaultJWTSettings myKey
-      cfg    = defaultCookieSettings :. jwtCfg :. EmptyContext
+      cfg    = (defaultCookieSettings { cookieXsrfSetting = Nothing }) :. jwtCfg :. EmptyContext
       --- Here we actually make concrete
-      api    = Proxy :: Proxy (API '[JWT])
-  pure $ cors (\r -> corsPolicy) $ serveWithContext api
+      api = Proxy :: Proxy (API '[Cookie])
+  pure $ cors corsPolicy $ serveWithContext api
                           cfg
-                          (server defaultCookieSettings jwtCfg connString)
-    where corsPolicy = Just simpleCorsResourcePolicy { corsOrigins = Just (["http://127.0.0.1:1234", "http://localhost:1234"], True), corsRequestHeaders =  (corsRequestHeaders simpleCorsResourcePolicy) ++ ["content-type"] }
+                          (server (defaultCookieSettings { cookieXsrfSetting = Nothing }) jwtCfg connString)
+    where corsPolicy r = Just simpleCorsResourcePolicy { corsOrigins = Just (["http://127.0.0.1:1234", "http://localhost:1234"], True), corsRequestHeaders =  (corsRequestHeaders simpleCorsResourcePolicy) ++ ["content-type"] }
 
 
 runServer :: Int -> ConnectionString -> IO ()
