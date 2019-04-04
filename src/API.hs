@@ -286,7 +286,7 @@ mkApp connString = do
       cfg    = (defaultCookieSettings { cookieXsrfSetting = Nothing }) :. jwtCfg :. EmptyContext
       --- Here we actually make concrete
       api = Proxy :: Proxy (API '[Cookie])
-  pure $ cors corsPolicy $ serveWithContext api
+  return $ cors corsPolicy $ serveWithContext api
                           cfg
                           (server (defaultCookieSettings { cookieXsrfSetting = Nothing }) jwtCfg connString)
     where corsPolicy r = Just simpleCorsResourcePolicy { corsOrigins = Just (["http://127.0.0.1:1234", "http://localhost:1234"], True), corsRequestHeaders =  (corsRequestHeaders simpleCorsResourcePolicy) ++ ["content-type"] }

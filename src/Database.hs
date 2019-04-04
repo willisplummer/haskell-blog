@@ -131,7 +131,6 @@ fetchEntity connString id = do
   return $ Entity key <$> mEntity
   where
     key = toSqlKey id
-  
 
 -- JUDGEABLES
 
