@@ -128,7 +128,7 @@ deleteUserPG connString uid = runAction connString (delete userKey)
 fetchEntity :: forall a. ToBackendKey SqlBackend a => ConnectionString -> Int64 -> IO (Maybe (Entity a))
 fetchEntity connString id = do 
   mEntity <- runAction connString $ get key
-  return (Entity key <$> mEntity)
+  return $ Entity key <$> mEntity
   where
     key = toSqlKey id
   
