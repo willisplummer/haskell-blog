@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE ExistentialQuantification #-}
+
 module Database where
 
 import           Control.Monad.Logger           ( runStdoutLoggingT
@@ -32,6 +35,7 @@ import           Database.Persist               ( entityKey
                                                 , selectList
                                                 , (==.)
                                                 )
+import Database.Persist.Class (ToBackendKey)
 import           Database.Persist.Sql           ( fromSqlKey
                                                 , toSqlKey
                                                 , SqlBackend
@@ -121,18 +125,21 @@ deleteUserPG connString uid = runAction connString (delete userKey)
   userKey :: Key User
   userKey = toSqlKey uid
 
+fetchEntity :: forall a. ToBackendKey SqlBackend a => ConnectionString -> Int64 -> IO (Maybe (Entity a))
+fetchEntity connString id = do 
+  mEntity <- runAction connString $ get key
+  return (Entity key <$> mEntity)
+  where
+    key = toSqlKey id
+  
+
 -- JUDGEABLES
 
 fetchJudgeablesPG :: ConnectionString -> IO [Entity Judgeable]
 fetchJudgeablesPG connString = runAction connString (selectList [] [])
 
 fetchJudgeablePG :: ConnectionString -> Int64 -> IO (Maybe (Entity Judgeable))
-fetchJudgeablePG connString judgeableId = do
-  mJudgeable <- runAction connString (get judgeableKey)
-  return $ Entity judgeableKey <$> mJudgeable
-  where
-    judgeableKey :: Key Judgeable
-    judgeableKey = toSqlKey judgeableId
+fetchJudgeablePG = fetchEntity
 
 createJudgeablePG :: ConnectionString -> Judgeable -> IO (Maybe (Entity Judgeable))
 createJudgeablePG connString judgeable = do
@@ -142,12 +149,7 @@ createJudgeablePG connString judgeable = do
 -- JUDGEMENTS
 
 fetchJudgementPG :: ConnectionString -> Int64 -> IO (Maybe (Entity Judgement))
-fetchJudgementPG connString judgementId = do
-  mJudgement <- runAction connString (get judgementKey)
-  return (Entity judgementKey <$> mJudgement)
-  where
-    judgementKey :: Key Judgement
-    judgementKey = toSqlKey judgementId
+fetchJudgementPG = fetchEntity
 
 createJudgementPG :: ConnectionString -> Judgement -> IO (Maybe (Entity Judgement))
 createJudgementPG connString judgement = do
@@ -156,9 +158,12 @@ createJudgementPG connString judgement = do
 
 -- FOLLOWS
 
+fetchFollowPG' :: ConnectionString -> Int64 -> IO (Maybe (Entity Follow))
+fetchFollowPG' = fetchEntity
+
 fetchFollowPG :: ConnectionString -> Int64 -> IO (Maybe (Entity Follow))
 fetchFollowPG connString followId = do
-  mFollow <- runAction connString (get followKey)
+  mFollow <- runAction connString $ get followKey
   return (Entity followKey <$> mFollow)
   where
     followKey :: Key Follow
