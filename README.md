@@ -1,6 +1,13 @@
 # My Blog
 
-## Local Development
+## Local Dev
+
+```
+stack build
+stack exec run-server
+```
+
+## Docker Development
 
 ```
 docker-compose up web
