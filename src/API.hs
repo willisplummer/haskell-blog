@@ -283,12 +283,12 @@ mkApp connString = do
   -- Adding some configurations. All authentications require CookieSettings to
   -- be in the context.
   let jwtCfg = defaultJWTSettings myKey
-      cfg    = (defaultCookieSettings { cookieXsrfSetting = Nothing }) :. jwtCfg :. EmptyContext
+      cfg    = defaultCookieSettings :. jwtCfg :. EmptyContext
       --- Here we actually make concrete
       api = Proxy :: Proxy (API '[Cookie])
   return $ cors corsPolicy $ serveWithContext api
                           cfg
-                          (server (defaultCookieSettings { cookieXsrfSetting = Nothing }) jwtCfg connString)
+                          (server defaultCookieSettings jwtCfg connString)
     where corsPolicy r = Just simpleCorsResourcePolicy { corsOrigins = Just (["http://127.0.0.1:1234", "http://localhost:1234"], True), corsRequestHeaders =  (corsRequestHeaders simpleCorsResourcePolicy) ++ ["content-type"] }
 
 

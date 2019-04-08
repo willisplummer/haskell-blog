@@ -1,4 +1,4 @@
-FROM willisplummer/haskell-blog:firsttry
+FROM willisplummer/haskell-blog:latest
 
 RUN apt-get update
 RUN apt-get install -y postgresql libpq-dev

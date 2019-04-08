@@ -30,6 +30,14 @@ Right now I'm using test-framework and HUnit but I've read good things about usi
 
 Note: do not edit the generated `.cabal` file
 
+NOTE: once you add packages, you'll probably want to publish a new docker image so that you don't have to go through the install step everytime you run `docker-compose build`:
+
+```
+docker-compose build
+docker tag myblog_web willisplummer/haskell-blog:latest
+docker push willisplummer/haskell-blog:latest
+```
+
 ## Deploy
 
 [deploy to heroku via docker registry](https://devcenter.heroku.com/articles/container-registry-and-runtime#building-and-pushing-image-s)
