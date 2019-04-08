@@ -27,7 +27,9 @@ dependencies:
 - aeson
 - bcrypt
 - bytestring
+- containers
 - hlint
+- http-client
 - monad-logger
 - mtl
 - persistent
@@ -37,6 +39,7 @@ dependencies:
 - servant
 - servant-auth
 - servant-auth-server
+- servant-client
 - servant-server
 - string-conversions
 - text
