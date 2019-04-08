@@ -50,6 +50,7 @@ docker push willisplummer/haskell-blog:latest
 [deploy to heroku via docker registry](https://devcenter.heroku.com/articles/container-registry-and-runtime#building-and-pushing-image-s)
 
 ```
+heroku container:login
 heroku container:push web -a haskell-blog
 heroku container:release web -a haskell-blog
 heroku open -a haskell-blog
