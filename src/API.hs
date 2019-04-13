@@ -46,10 +46,7 @@ import           Network.Wai.Handler.Warp       ( defaultSettings
                                                 , setBeforeMainLoop
                                                 , setPort
                                                 )
-import           Network.Wai.Middleware.Cors    ( cors
-                                                , simpleCorsResourcePolicy
-                                                , corsOrigins
-                                                , corsRequestHeaders
+import           Network.Wai.Middleware.Cors    ( simpleCors
                                                 )
 import           Servant
 import           Servant.API                    
@@ -283,14 +280,12 @@ mkApp connString = do
   -- Adding some configurations. All authentications require CookieSettings to
   -- be in the context.
   let jwtCfg = defaultJWTSettings myKey
-      cfg    = defaultCookieSettings :. jwtCfg :. EmptyContext
+      cfg    = (defaultCookieSettings { cookieXsrfSetting = Nothing }) :. jwtCfg :. EmptyContext
       --- Here we actually make concrete
       api = Proxy :: Proxy (API '[Cookie])
-  return $ cors corsPolicy $ serveWithContext api
+  return $ simpleCors $ serveWithContext api
                           cfg
-                          (server defaultCookieSettings jwtCfg connString)
-    where corsPolicy r = Just simpleCorsResourcePolicy { corsOrigins = Just (["http://127.0.0.1:1234", "http://localhost:1234"], True), corsRequestHeaders =  (corsRequestHeaders simpleCorsResourcePolicy) ++ ["content-type"] }
-
+                          (server (defaultCookieSettings { cookieXsrfSetting = Nothing }) jwtCfg connString)
 
 runServer :: Int -> ConnectionString -> IO ()
 runServer port connString = do
