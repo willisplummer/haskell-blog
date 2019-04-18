@@ -143,7 +143,7 @@ judgeablesServer connString currentUser =
           judgeableKey = toSqlKey judgeableId
 
           judgement :: Judgement
-          judgement = Judgement judgeableKey (pId currentUser) isGood
+          judgement = Judgement judgeableKey (puId currentUser) isGood
 
 type UsersAPI =
   "users" :> Get '[JSON] [Entity User]
@@ -177,7 +177,7 @@ usersServer connString currentUser =
           followedKey = toSqlKey followedId
 
           follow :: Follow
-          follow = Follow (pId currentUser) followedKey
+          follow = Follow (puId currentUser) followedKey
 
 type Protected =
   JudgeablesAPI

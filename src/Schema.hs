@@ -66,7 +66,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
 data PresentationalUser = PUser {
   puName :: String,
   puEmail :: String,
-  pId :: Key User
+  puId :: Key User
 } deriving (Eq, Show, Read, Generic)
 
 instance ToJSON PresentationalUser where
