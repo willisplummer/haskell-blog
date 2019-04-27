@@ -86,6 +86,7 @@ import           Database                       ( createGetUserPG
                                                 , createJudgeablePG
                                                 , createJudgementPG
                                                 , createFollowPG
+                                                , fetchFollowsPG
                                                 , fetchUserByEmailPG
                                                 , fetchUserPG
                                                 , fetchUsersPG
@@ -147,17 +148,22 @@ judgeablesServer connString currentUser =
 
 type UsersAPI =
   "users" :> Get '[JSON] [Entity User]
+  :<|> "follows" :> Get '[JSON] [Entity Follow]
   :<|> "users" :> Capture "id" Int64 :> Get '[JSON] (Entity User)
   :<|> "users" :> Capture "id" Int64 :> "follow" :> Servant.API.PostNoContent '[JSON] (Entity Follow)
 
 usersServer :: ConnectionString -> PresentationalUser -> Server UsersAPI
 usersServer connString currentUser =
   getUsersHandler connString
+  :<|> getFollowsHandler connString currentUser
   :<|> getUserHandler connString
   :<|> followUserHandler connString currentUser
   where
     getUsersHandler :: ConnectionString -> Handler [Entity User]
     getUsersHandler connString = liftIO $ fetchUsersPG connString
+
+    getFollowsHandler :: ConnectionString -> PresentationalUser -> Handler [Entity Follow]
+    getFollowsHandler connString currentUser = liftIO $ fetchFollowsPG connString (puId currentUser)
 
     getUserHandler :: ConnectionString -> Int64 -> Handler (Entity User)
     getUserHandler connString id = do

@@ -85,15 +85,6 @@ fetchUserByEmailViaConnectionPG connection email = do
 hashPassword :: BS.ByteString -> IO (Maybe BS.ByteString)
 hashPassword =
   Crypto.BCrypt.hashPasswordUsingPolicy Crypto.BCrypt.slowerBcryptHashingPolicy
-
-  -- instance FromJSON BS.ByteString where
-  --   parseJSON src = do
-  --     str <- parseJSON src
-  --     return $ B8.pack str
-  
-  -- instance ToJSON BS.ByteString where
-  --   toJSON = toJSON . B8.unpack
-
     
 hashUser :: NewUser -> IO (Maybe User)
 hashUser (NewUser name email pw) = do
@@ -157,16 +148,12 @@ createJudgementPG connString judgement = do
 
 -- FOLLOWS
 
-fetchFollowPG' :: ConnectionString -> Int64 -> IO (Maybe (Entity Follow))
-fetchFollowPG' = fetchEntity
+fetchFollowsPG :: ConnectionString -> Key User -> IO [Entity Follow]
+fetchFollowsPG connString currentUserId =
+  runAction connString (selectList [FollowFollowerId ==. currentUserId] [])
 
 fetchFollowPG :: ConnectionString -> Int64 -> IO (Maybe (Entity Follow))
-fetchFollowPG connString followId = do
-  mFollow <- runAction connString $ get followKey
-  return (Entity followKey <$> mFollow)
-  where
-    followKey :: Key Follow
-    followKey = toSqlKey followId
+fetchFollowPG = fetchEntity
 
 createFollowPG :: ConnectionString -> Follow -> IO (Maybe (Entity Follow))
 createFollowPG connString follow = do
