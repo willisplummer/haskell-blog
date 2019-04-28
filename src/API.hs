@@ -87,6 +87,7 @@ import           Database                       ( createGetUserPG
                                                 , createJudgementPG
                                                 , createFollowPG
                                                 , fetchFollowsPG
+                                                , destroyFollowPG
                                                 , fetchUserByEmailPG
                                                 , fetchUserPG
                                                 , fetchUsersPG
@@ -150,17 +151,19 @@ type UsersAPI =
   "users" :> Get '[JSON] [Entity User]
   :<|> "follows" :> Get '[JSON] [Entity Follow]
   :<|> "users" :> Capture "id" Int64 :> Get '[JSON] (Entity User)
-  :<|> "users" :> Capture "id" Int64 :> "follow" :> Servant.API.PostNoContent '[JSON] (Entity Follow)
+  :<|> "users" :> Capture "id" Int64 :> "follow" :> Servant.API.Post '[JSON] (Entity Follow)
+  :<|> "users" :> Capture "id" Int64 :> "unfollow" :> Servant.API.PostNoContent '[JSON] ()
 
 usersServer :: ConnectionString -> PresentationalUser -> Server UsersAPI
 usersServer connString currentUser =
-  getUsersHandler connString
+  getUsersHandler connString currentUser
   :<|> getFollowsHandler connString currentUser
   :<|> getUserHandler connString
   :<|> followUserHandler connString currentUser
+  :<|> unfollowUserHandler connString currentUser
   where
-    getUsersHandler :: ConnectionString -> Handler [Entity User]
-    getUsersHandler connString = liftIO $ fetchUsersPG connString
+    getUsersHandler :: ConnectionString -> PresentationalUser -> Handler [Entity User]
+    getUsersHandler connString currentUser = liftIO $ fetchUsersPG connString (puId currentUser)
 
     getFollowsHandler :: ConnectionString -> PresentationalUser -> Handler [Entity Follow]
     getFollowsHandler connString currentUser = liftIO $ fetchFollowsPG connString (puId currentUser)
@@ -184,6 +187,14 @@ usersServer connString currentUser =
 
           follow :: Follow
           follow = Follow (puId currentUser) followedKey
+
+    unfollowUserHandler :: ConnectionString -> PresentationalUser -> Int64 -> Handler () 
+    unfollowUserHandler connString currentUser followedId = do
+      mFollow <- liftIO $ destroyFollowPG connString (puId currentUser) followedKey
+      return ()
+        where
+          followedKey :: Key User
+          followedKey = toSqlKey followedId
 
 type Protected =
   JudgeablesAPI

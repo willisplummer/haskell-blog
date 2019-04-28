@@ -32,8 +32,10 @@ import           Database.Persist               ( entityKey
                                                 , get
                                                 , insert
                                                 , delete
+                                                , deleteWhere
                                                 , selectList
                                                 , (==.)
+                                                , (!=.)
                                                 )
 import Database.Persist.Class (ToBackendKey)
 import           Database.Persist.Sql           ( fromSqlKey
@@ -61,8 +63,8 @@ runAction connectionString action =
 migrateDB :: ConnectionString -> IO ()
 migrateDB connString = runAction connString (runMigrationUnsafe migrateAll)
 
-fetchUsersPG :: ConnectionString -> IO [Entity User]
-fetchUsersPG connString = runAction connString (selectList [] [])
+fetchUsersPG :: ConnectionString -> UserId -> IO [Entity User]
+fetchUsersPG connString currentUserId = runAction connString (selectList [UserId !=. currentUserId] [])
 
 fetchUserPG :: ConnectionString -> Int64 -> IO (Maybe (Entity User))
 fetchUserPG connString uid = do
@@ -151,6 +153,10 @@ createJudgementPG connString judgement = do
 fetchFollowsPG :: ConnectionString -> Key User -> IO [Entity Follow]
 fetchFollowsPG connString currentUserId =
   runAction connString (selectList [FollowFollowerId ==. currentUserId] [])
+
+destroyFollowPG :: ConnectionString -> Key User -> Key User -> IO ()
+destroyFollowPG connString currentUserId followedId =
+  runAction connString (deleteWhere [FollowFollowerId ==. currentUserId, FollowFollowedId ==. followedId])
 
 fetchFollowPG :: ConnectionString -> Int64 -> IO (Maybe (Entity Follow))
 fetchFollowPG = fetchEntity
