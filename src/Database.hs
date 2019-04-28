@@ -140,6 +140,9 @@ createJudgeablePG connString judgeable = do
 
 -- JUDGEMENTS
 
+fetchJudgementsPG :: ConnectionString -> Key User -> IO ([Entity Judgement])
+fetchJudgementsPG connString currentUserId = runAction connString (selectList [JudgementUserId ==. currentUserId] [])
+
 fetchJudgementPG :: ConnectionString -> Int64 -> IO (Maybe (Entity Judgement))
 fetchJudgementPG = fetchEntity
 

@@ -85,6 +85,7 @@ import           Schema                         ( PresentationalUser(..)
 import           Database                       ( createGetUserPG
                                                 , createJudgeablePG
                                                 , createJudgementPG
+                                                , fetchJudgementsPG
                                                 , createFollowPG
                                                 , fetchFollowsPG
                                                 , destroyFollowPG
@@ -104,21 +105,33 @@ data Login = Login { email :: String, password :: String }
 instance ToJSON Login
 instance FromJSON Login
 
+data Opinion = Opinion {
+  isGood :: Bool
+} deriving (Eq, Show, Read, Generic)
+
+instance ToJSON Opinion
+instance FromJSON Opinion
+
 type JudgeablesAPI = 
   "judgeables" :> Get '[JSON] [Entity Judgeable]
+  :<|> "judgements" :> Get '[JSON] [Entity Judgement]
   :<|> "judgeables" :> Capture "id" Int64 :> Get '[JSON] (Entity Judgeable)
   :<|> "judgeables" :> ReqBody '[JSON] Judgeable :> Post '[JSON] (Entity Judgeable)
-  :<|> "judgeables" :> Capture "id" Int64 :> "judgements" :> ReqBody '[JSON] Bool :> Post '[JSON] (Entity Judgement)
+  :<|> "judgeables" :> Capture "id" Int64 :> "judgements" :> ReqBody '[JSON] Opinion :> Post '[JSON] (Entity Judgement)
 
 judgeablesServer :: ConnectionString -> PresentationalUser -> Server JudgeablesAPI
 judgeablesServer connString currentUser =
   (getJudgeablesHandler connString)
+  :<|> (getJudgementsHandler connString currentUser)
   :<|> (getJudgeableHandler connString)
   :<|> (createJudgeableHandler connString)
   :<|> (createJudgementHandler connString currentUser)
   where
     getJudgeablesHandler :: ConnectionString -> Handler [Entity Judgeable]
     getJudgeablesHandler connString = liftIO $ fetchJudgeablesPG connString
+
+    getJudgementsHandler :: ConnectionString -> PresentationalUser -> Handler [Entity Judgement]
+    getJudgementsHandler connString currentUser = liftIO $ fetchJudgementsPG connString (puId currentUser)
 
     getJudgeableHandler :: ConnectionString -> Int64 -> Handler (Entity Judgeable)
     getJudgeableHandler connString judgeableId = do
@@ -134,8 +147,8 @@ judgeablesServer connString currentUser =
         Nothing -> throwError err422
         Just newJudgeable -> return newJudgeable
 
-    createJudgementHandler :: ConnectionString -> PresentationalUser -> Int64 -> Bool -> Handler (Entity Judgement)
-    createJudgementHandler connString currentUser judgeableId isGood = do
+    createJudgementHandler :: ConnectionString -> PresentationalUser -> Int64 -> Opinion -> Handler (Entity Judgement)
+    createJudgementHandler connString currentUser judgeableId opinion = do
       mNewJudgement <- liftIO $ createJudgementPG connString judgement
       case mNewJudgement of
         Nothing -> throwError err422
@@ -145,7 +158,7 @@ judgeablesServer connString currentUser =
           judgeableKey = toSqlKey judgeableId
 
           judgement :: Judgement
-          judgement = Judgement judgeableKey (puId currentUser) isGood
+          judgement = Judgement judgeableKey (puId currentUser) (isGood opinion)
 
 type UsersAPI =
   "users" :> Get '[JSON] [Entity User]
