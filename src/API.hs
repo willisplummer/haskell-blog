@@ -94,6 +94,7 @@ import           Database                       ( createGetUserPG
                                                 , fetchUsersPG
                                                 , fetchJudgeablesPG
                                                 , fetchJudgeablePG
+                                                , fetchRandomJudgeablePG
                                                 )
 
 instance ToJWT PresentationalUser
@@ -114,6 +115,7 @@ instance FromJSON Opinion
 
 type JudgeablesAPI = 
   "judgeables" :> Get '[JSON] [Entity Judgeable]
+  :<|> "judgeables" :> "random" :> Get '[JSON] [Entity Judgeable]
   :<|> "judgements" :> Get '[JSON] [Entity Judgement]
   :<|> "judgeables" :> Capture "id" Int64 :> Get '[JSON] (Entity Judgeable)
   :<|> "judgeables" :> ReqBody '[JSON] Judgeable :> Post '[JSON] (Entity Judgeable)
@@ -122,6 +124,7 @@ type JudgeablesAPI =
 judgeablesServer :: ConnectionString -> PresentationalUser -> Server JudgeablesAPI
 judgeablesServer connString currentUser =
   (getJudgeablesHandler connString)
+  :<|> (getRandomJudgeableHandler connString)
   :<|> (getJudgementsHandler connString currentUser)
   :<|> (getJudgeableHandler connString)
   :<|> (createJudgeableHandler connString)
@@ -129,6 +132,9 @@ judgeablesServer connString currentUser =
   where
     getJudgeablesHandler :: ConnectionString -> Handler [Entity Judgeable]
     getJudgeablesHandler connString = liftIO $ fetchJudgeablesPG connString
+
+    getRandomJudgeableHandler :: ConnectionString -> Handler [Entity Judgeable]
+    getRandomJudgeableHandler connString = liftIO $ fetchRandomJudgeablePG connString
 
     getJudgementsHandler :: ConnectionString -> PresentationalUser -> Handler [Entity Judgement]
     getJudgementsHandler connString currentUser = liftIO $ fetchJudgementsPG connString (puId currentUser)

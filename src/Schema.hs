@@ -42,21 +42,21 @@ import           GHC.Generics
 
 
 PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persistLowerCase|
-  User
+  User sql=users
     name String
     email String
     hashedPassword BS.ByteString
     UniqueEmail email
     deriving Show Read
-  Follow json
+  Follow json sql=follows
     followerId UserId
     followedId UserId
     deriving Show Read
-  Judgeable json
+  Judgeable json sql=judgeables
     name String
     imageUrl String
     deriving Show Read
-  Judgement json
+  Judgement json sql=judgements
     judgeableId JudgeableId
     userId UserId
     isGood Bool

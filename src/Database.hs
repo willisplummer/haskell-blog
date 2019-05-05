@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Database where
 
@@ -41,6 +42,7 @@ import Database.Persist.Class (ToBackendKey)
 import           Database.Persist.Sql           ( fromSqlKey
                                                 , toSqlKey
                                                 , SqlBackend
+                                                , rawSql
                                                 )
 import           Database.Persist.Postgresql    ( Connection
                                                 , ConnectionString
@@ -132,6 +134,12 @@ fetchJudgeablesPG connString = runAction connString (selectList [] [])
 
 fetchJudgeablePG :: ConnectionString -> Int64 -> IO (Maybe (Entity Judgeable))
 fetchJudgeablePG = fetchEntity
+
+fetchRandomJudgeablePG :: ConnectionString -> IO [Entity Judgeable]
+fetchRandomJudgeablePG connString = runAction connString action
+    where
+      action :: MonadIO m => SqlPersistT m [Entity Judgeable]
+      action = rawSql "SELECT ?? FROM judgeables ORDER BY random() LIMIT 1;" []
 
 createJudgeablePG :: ConnectionString -> Judgeable -> IO (Maybe (Entity Judgeable))
 createJudgeablePG connString judgeable = do
