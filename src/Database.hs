@@ -98,6 +98,7 @@ hashUser (NewUser name email pw) = do
           { userName           = name
           , userEmail          = email
           , userHashedPassword = hashedPW
+          , userIsAdmin        = False
           }
         )
     <$> mHashedPW

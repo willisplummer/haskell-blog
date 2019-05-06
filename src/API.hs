@@ -223,6 +223,8 @@ type Protected =
 protected :: ConnectionString -> AuthResult PresentationalUser -> Server Protected
 -- If we get an "Authenticated v", we can trust the information in v, since
 -- it was signed by a key we trust.
+protected connString (Authenticated (PUser { puIsAdmin = True })) =
+  throwAll err401
 protected connString (Authenticated currentUser) =
   judgeablesServer connString currentUser
   :<|> usersServer connString currentUser
@@ -236,9 +238,8 @@ loginHandler
   -> Login
   -> Handler
        ( Headers
-           '[Header "Set-Cookie" SetCookie, Header
-             "Set-Cookie"
-             SetCookie]
+           '[Header "Set-Cookie" SetCookie,
+            Header "Set-Cookie" SetCookie]
            NoContent
        )
 

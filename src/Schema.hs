@@ -46,6 +46,7 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
     name String
     email String
     hashedPassword BS.ByteString
+    isAdmin Bool
     UniqueEmail email
     deriving Show Read
   Follow json sql=follows
@@ -66,7 +67,8 @@ PTH.share [PTH.mkPersist PTH.sqlSettings, PTH.mkMigrate "migrateAll"] [PTH.persi
 data PresentationalUser = PUser {
   puName :: String,
   puEmail :: String,
-  puId :: Key User
+  puId :: Key User,
+  puIsAdmin :: Bool
 } deriving (Eq, Show, Read, Generic)
 
 instance ToJSON PresentationalUser where
@@ -80,7 +82,7 @@ instance FromJSON PresentationalUser where
   }
 
 presentationalizeUser :: Entity User -> PresentationalUser
-presentationalizeUser (Entity id (User name email pw)) = PUser name email id
+presentationalizeUser (Entity id (User name email pw isAdmin)) = PUser name email id isAdmin
 
 instance ToJSON (Entity User) where
   toJSON = toJSON . presentationalizeUser
