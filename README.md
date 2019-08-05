@@ -60,6 +60,8 @@ heroku open -a haskell-blog
 
 [ ] look into using [release phase](https://devcenter.heroku.com/articles/release-phase) to run migrations as part of deploy
 
+- login emails shouldnt be case sensitive
+
 ## API
 
 _unauthenticated routes_
