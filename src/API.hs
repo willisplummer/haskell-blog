@@ -26,6 +26,7 @@ import qualified Data.ByteString.Char8         as B8
                                                 ( pack
                                                 , unpack
                                                 )
+import Data.Char (toLower)
 import           Data.Int                       ( Int64 )
 import           Data.NewUser
 import           Data.Proxy                     ( Proxy(..) )
@@ -243,7 +244,7 @@ loginHandler
        )
 
 loginHandler cookieSettings jwtSettings connString (Login email password) = do
-  mUser         <- liftIO $ fetchUserByEmailPG connString email
+  mUser         <- liftIO $ fetchUserByEmailPG connString (toLower <$> email)
   case mUser of
     Nothing -> throwError err401
     Just user -> do

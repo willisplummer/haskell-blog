@@ -22,6 +22,7 @@ import           Data.Int                       ( Int64 )
 import qualified Data.ByteString               as BS
                                                 ( ByteString )
 import qualified Data.ByteString.Char8         as B8
+import Data.Char (toLower)
 
 import           Data.NewUser
 import           Data.Pool                      ( Pool )
@@ -96,7 +97,7 @@ hashUser (NewUser name email pw) = do
   return
     $   (\hashedPW -> User
           { userName           = name
-          , userEmail          = email
+          , userEmail          = toLower <$> email
           , userHashedPassword = hashedPW
           }
         )
