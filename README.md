@@ -76,3 +76,13 @@ POST `/judgeables/id/judgements` - create judgement for judgeable item
 GET `/users` - get users
 GET `/users/id/judgements` - get a user's judgements
 POST `/users/id/subscribe` - create a subscription to a user's judgements
+
+## Example Curl Commands
+
+### signup
+
+curl --header "Content-Type: application/json; charset=utf-8" --verbose --data '{"email": "willisplummer@gmail.com", "password": "password", "username": "wmp224"}' https://e6cdfc21.ngrok.io/signup
+
+### login
+
+curl --header "Content-Type: application/json; charset=utf-8" --verbose --data '{"email": "willisplummer@gmail.com", "password": "password"}' https://e6cdfc21.ngrok.io/login
